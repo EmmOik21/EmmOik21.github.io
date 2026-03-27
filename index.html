@@ -7,7 +7,9 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>  
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -203,12 +205,6 @@ input:focus,select:focus{border-color:var(--blue-mid);background:#fff;}
 // ══════════════════════════════════════════════
 // ── REPLACE THESE TWO VALUES with your Supabase credentials ──
 
-
-// ════════════════════════════════════════════
-//  PASTE YOUR SUPABASE KEYS HERE
-const SUPABASE_URL = 'PROJECT URL';
-const SUPABASE_KEY = 'SUPABASE ACON';
-// ════════════════════════════════════════════
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -218,20 +214,6 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
-
-// ════════════════════════════════════════════
-// CONFIG - Load from config.js (LOCAL ONLY)
-// ════════════════════════════════════════════
-// config.js should contain:
-// const SUPABASE_URL = '...';
-// const SUPABASE_KEY = '...';
-// This file is in .gitignore so credentials never commit to GitHub
-
-if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
-  console.error('❌ Supabase config not found. Create config.js with your credentials.');
-  document.body.innerHTML = '<div style="padding:2rem;color:red;"><h2>Configuration Error</h2><p>Create config.js file with Supabase credentials</p></div>';
-  throw new Error('config.js missing');
-}
 
   const errEl = document.getElementById('login-err');
   errEl.style.display = 'none';
