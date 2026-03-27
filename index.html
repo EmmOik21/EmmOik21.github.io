@@ -173,11 +173,12 @@ input:focus,select:focus{border-color:var(--blue-mid);background:#fff;}
       <div class="form-topbar">
         <div class="form-code" id="form-code-lbl"></div>
         <div class="form-role" id="form-role-lbl"></div>
+        <div id="autosave-indicator" style="margin-left:auto;font-size:11px;font-family:sans-serif;color:var(--teal);display:none;">✓ Αυτόματη αποθήκευση</div>
       </div>
       <div id="form-body"></div>
       <div class="form-actions">
         <button class="cancel-btn" onclick="goBackToFamilies()">← Πίσω</button>
-        <button class="save-btn" id="save-btn" onclick="saveMember()">Αποθήκευση</button>
+        <button class="save-btn" id="save-btn" onclick="saveMember()">Αποθήκευση στη Βάση</button>
       </div>
       <div id="save-msg" class="save-msg"></div>
     </div>
@@ -214,16 +215,67 @@ sb.auth.onAuthStateChange((event, session) => {
 });
 
 const formPersistence = {
-  save() { sessionStorage.setItem('formState', JSON.stringify({ formState, curFamId, curFamCode, curRole, curMemId })); },
-  load() { const s = sessionStorage.getItem('formState'); return s ? JSON.parse(s) : null; },
-  clear() { sessionStorage.removeItem('formState'); }
+  save() { 
+    if (curFamCode && curRole) {
+      localStorage.setItem('fh_formState', JSON.stringify({ formState, curFamId, curFamCode, curRole, curMemId, timestamp: Date.now() }));
+    }
+  },
+  load() { 
+    const s = localStorage.getItem('fh_formState'); 
+    if (!s) return null;
+    const data = JSON.parse(s);
+    // Check if data is less than 24 hours old
+    if (data.timestamp && (Date.now() - data.timestamp) < 24 * 60 * 60 * 1000) {
+      return data;
+    }
+    localStorage.removeItem('fh_formState');
+    return null;
+  },
+  clear() { localStorage.removeItem('fh_formState'); },
+  hasUnsaved() { return localStorage.getItem('fh_formState') !== null; }
 };
 
+// Save immediately on every change (debounced to 500ms to avoid excessive writes)
 let autoSaveTimer = null;
+let indicatorTimer = null;
 function triggerAutoSave() {
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => formPersistence.save(), 5000);
+  autoSaveTimer = setTimeout(() => {
+    formPersistence.save();
+    // Show auto-save indicator
+    const indicator = document.getElementById('autosave-indicator');
+    if (indicator) {
+      indicator.style.display = 'block';
+      if (indicatorTimer) clearTimeout(indicatorTimer);
+      indicatorTimer = setTimeout(() => { indicator.style.display = 'none'; }, 2000);
+    }
+  }, 500);
 }
+
+// Save when user leaves the page or switches tabs
+window.addEventListener('beforeunload', function(e) {
+  if (document.querySelector('.view.active')?.id === 'view-form' && Object.keys(formState).length > 0) {
+    formPersistence.save();
+    // Show warning if there's unsaved data
+    e.preventDefault();
+    e.returnValue = 'Έχετε μη αποθηκευμένες αλλαγές. Είστε σίγουροι ότι θέλετε να φύγετε;';
+    return e.returnValue;
+  }
+});
+
+// Save when tab becomes hidden (user switches to another tab)
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden' && document.querySelector('.view.active')?.id === 'view-form') {
+    formPersistence.save();
+  }
+});
+
+// Save on page unload
+window.addEventListener('pagehide', function() {
+  if (document.querySelector('.view.active')?.id === 'view-form') {
+    formPersistence.save();
+  }
+});
 
 function showView(name) {
   if (document.querySelector('.view.active')?.id === 'view-form') formPersistence.save();
@@ -238,6 +290,29 @@ async function loadFamilies() {
   const { data } = await sb.from('families').select('*, members(*)').order('family_code', { ascending: true });
   allFamilies = data || [];
   renderFamilies();
+  
+  // Check for unsaved data from previous session
+  checkForUnsavedData();
+}
+
+function checkForUnsavedData() {
+  const saved = formPersistence.load();
+  if (saved && saved.curFamCode && saved.curRole && Object.keys(saved.formState || {}).length > 0) {
+    const timeAgo = Math.round((Date.now() - saved.timestamp) / 60000);
+    const timeStr = timeAgo < 60 ? timeAgo + ' λεπτά' : Math.round(timeAgo/60) + ' ώρες';
+    if (confirm('Βρέθηκαν μη αποθηκευμένα δεδομένα για ' + saved.curFamCode + '_' + saved.curRole + ' (πριν ' + timeStr + ').\n\nΘέλετε να τα επαναφέρετε;')) {
+      // Find the family and open the form
+      const fam = allFamilies.find(f => f.id === saved.curFamId);
+      if (fam) {
+        openMemberForm(saved.curFamId, saved.curFamCode, saved.curRole, saved.curMemId);
+      } else {
+        // Family might have been deleted, clear the saved data
+        formPersistence.clear();
+      }
+    } else {
+      formPersistence.clear();
+    }
+  }
 }
 
 function renderFamilies() {
@@ -474,7 +549,7 @@ function medGridWithOther(pfx, list) {
     }
   });
   html += '</div>';
-  html += '<div id="' + pfx + '_Other_Input_Container" style="display:none;margin-top:8px;"><input type="text" id="' + pfx + '_Other_Medication_Text" placeholder="Όνομα δραστικής ουσίας 1, δραστικής ουσίας 2..." oninput="formState[\'' + pfx + '_Other_Medication_Text\']=this.value;triggerAutoSave()" style="width:100%;"></div>';
+  html += '<div id="' + pfx + '_Other_Input_Container" style="display:none;margin-top:8px;"><input type="text" id="' + pfx + '_Other_Medication_Text" placeholder="Περιγράψτε το φάρμακο..." oninput="formState[\'' + pfx + '_Other_Medication_Text\']=this.value;triggerAutoSave()" style="width:100%;"></div>';
   return html;
 }
 
