@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FH Family EDC</title>
 
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -199,11 +199,16 @@ input:focus,select:focus{border-color:var(--blue-mid);background:#fff;}
 
 <script>
 // ══════════════════════════════════════════════
-//  CONFIG - Supabase credentials
+//  CONFIG
 // ══════════════════════════════════════════════
+// ── REPLACE THESE TWO VALUES with your Supabase credentials ──
+
+
+// ════════════════════════════════════════════
+//  PASTE YOUR SUPABASE KEYS HERE
 const SUPABASE_URL = 'https://xhsyiqsddnqgtjrpoerk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhoc3lpcXNkZG5xZ3RqcnBvZXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMTgzMDgsImV4cCI6MjA4OTY5NDMwOH0.9WhEtvIBmBH9vlLrOZ5LpRTQFHsF4iyWsUgBwN4PLuw';
-
+// ════════════════════════════════════════════
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -213,7 +218,6 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
-
   const errEl = document.getElementById('login-err');
   errEl.style.display = 'none';
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
@@ -226,6 +230,8 @@ sb.auth.onAuthStateChange((event, session) => {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').style.display   = 'block';
     document.getElementById('topbar-user').textContent    = session.user.email;
+    // Only reload on actual sign-in — NOT on TOKEN_REFRESHED or tab-focus events
+    // which would collapse open panels and reset any form in progress
     if (event === 'SIGNED_IN') loadFamilies();
   } else {
     document.getElementById('login-screen').style.display = 'flex';
@@ -250,18 +256,20 @@ const formPersistence = {
   }
 };
 
+// Auto-save form state every 5 seconds to prevent data loss
 let autoSaveTimer = null;
 function triggerAutoSave() {
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(() => {
     formPersistence.save();
-  }, 5000);
+  }, 5000);  // Changed from 500ms to 5 seconds
 }
 
 // ══════════════════════════════════════════════
 //  VIEWS
 // ══════════════════════════════════════════════
 function showView(name) {
+  // Save current form state before switching views
   if (document.querySelector('.view.active')?.id === 'view-form') {
     formPersistence.save();
   }
@@ -306,42 +314,54 @@ function famRowHTML(fam) {
 
   const cards = [
     p1
-      ? '<div class="member-card" onclick="openMemberForm(\'' + fam.id + '\',\'' + fam.family_code + '\',\'Parent1\',\'' + p1.id + '\')"><div class="mc-code">' + fam.family_code + '_Parent1</div><div class="mc-name"><span class="mc-status"></span>' + (p1.data?.name||'—') + '</div><div class="mc-role">Γονέας 1</div></div>'
-      : '<div class="add-member-card" onclick="openMemberForm(\'' + fam.id + '\',\'' + fam.family_code + '\',\'Parent1\',null)">+ Γονέας 1</div>',
+      ? `<div class="member-card" onclick="openMemberForm('${fam.id}','${fam.family_code}','Parent1','${p1.id}')">
+           <div class="mc-code">${fam.family_code}_Parent1</div>
+           <div class="mc-name"><span class="mc-status"></span>${p1.data?.name||'—'}</div>
+           <div class="mc-role">Γονέας 1</div>
+         </div>`
+      : `<div class="add-member-card" onclick="openMemberForm('${fam.id}','${fam.family_code}','Parent1',null)">+ Γονέας 1</div>`,
     p2
-      ? '<div class="member-card" onclick="openMemberForm(\'' + fam.id + '\',\'' + fam.family_code + '\',\'Parent2\',\'' + p2.id + '\')"><div class="mc-code">' + fam.family_code + '_Parent2</div><div class="mc-name"><span class="mc-status"></span>' + (p2.data?.name||'—') + '</div><div class="mc-role">Γονέας 2</div></div>'
-      : '<div class="add-member-card" onclick="openMemberForm(\'' + fam.id + '\',\'' + fam.family_code + '\',\'Parent2\',null)">+ Γονέας 2</div>',
+      ? `<div class="member-card" onclick="openMemberForm('${fam.id}','${fam.family_code}','Parent2','${p2.id}')">
+           <div class="mc-code">${fam.family_code}_Parent2</div>
+           <div class="mc-name"><span class="mc-status"></span>${p2.data?.name||'—'}</div>
+           <div class="mc-role">Γονέας 2</div>
+         </div>`
+      : `<div class="add-member-card" onclick="openMemberForm('${fam.id}','${fam.family_code}','Parent2',null)">+ Γονέας 2</div>`,
     ...children.map(c =>
-      '<div class="member-card" onclick="openMemberForm(\'' + fam.id + '\',\'' + fam.family_code + '\',\'' + c.role + '\',\'' + c.id + '\')"><div class="mc-code">' + fam.family_code + '_' + c.role + '</div><div class="mc-name"><span class="mc-status"></span>' + (c.data?.name||'—') + '</div><div class="mc-role">' + roleLabel(c.role) + '</div></div>'
+      `<div class="member-card" onclick="openMemberForm('${fam.id}','${fam.family_code}','${c.role}','${c.id}')">
+         <div class="mc-code">${fam.family_code}_${c.role}</div>
+         <div class="mc-name"><span class="mc-status"></span>${c.data?.name||'—'}</div>
+         <div class="mc-role">${roleLabel(c.role)}</div>
+       </div>`
     ),
-    '<div class="add-member-card" onclick="openMemberForm(\'' + fam.id + '\',\'' + fam.family_code + '\',\'Child' + nextChildNum + '\',null)">+ Παιδί ' + nextChildNum + '</div>'
+    `<div class="add-member-card" onclick="openMemberForm('${fam.id}','${fam.family_code}','Child${nextChildNum}',null)">+ Παιδί ${nextChildNum}</div>`
   ].join('');
 
-  return '<div class="fam-row" id="famrow_' + fam.id + '">' +
-    '<div class="fam-row-head" onclick="toggleFam(\'' + fam.id + '\')">' +
-      '<div class="fam-row-left">' +
-        '<span class="fam-code">' + fam.family_code + '</span>' +
-        '<div>' +
-          '<div class="fam-name">' + famName + '</div>' +
-          '<div class="fam-meta">' + date + ' · ' + members.length + ' μέλη καταχωρημένα</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="fam-right">' +
-        (p1 ? '<span class="badge badge-blue">Γ1</span>' : '') +
-        (p2 ? '<span class="badge badge-blue">Γ2</span>' : '') +
-        (children.length ? '<span class="badge badge-teal">' + children.length + ' παιδ' + (children.length>1?'ιά':'ί') + '</span>' : '') +
-        '<span class="chev" id="chev_' + fam.id + '">▾</span>' +
-      '</div>' +
-    '</div>' +
-    '<div class="fam-row-body" id="fambody_' + fam.id + '">' +
-      '<div class="member-grid">' + cards + '</div>' +
-      '<div class="fam-actions">' +
-        '<button class="tb-btn" onclick="exportFamilyXLSX(\'' + fam.id + '\')">↓ XLSX</button>' +
-        '<button class="tb-btn" onclick="exportFamilyCSV(\'' + fam.id + '\')">↓ CSV</button>' +
-        '<button class="tb-btn danger" onclick="deleteFamily(\'' + fam.id + '\')">Διαγραφή οικογένειας</button>' +
-      '</div>' +
-    '</div>' +
-  '</div>';
+  return `<div class="fam-row" id="famrow_${fam.id}">
+    <div class="fam-row-head" onclick="toggleFam('${fam.id}')">
+      <div class="fam-row-left">
+        <span class="fam-code">${fam.family_code}</span>
+        <div>
+          <div class="fam-name">${famName}</div>
+          <div class="fam-meta">${date} · ${members.length} μέλη καταχωρημένα</div>
+        </div>
+      </div>
+      <div class="fam-right">
+        ${p1?'<span class="badge badge-blue">Γ1</span>':''}
+        ${p2?'<span class="badge badge-blue">Γ2</span>':''}
+        ${children.length?`<span class="badge badge-teal">${children.length} παιδ${children.length>1?'ιά':'ί'}</span>`:''}
+        <span class="chev" id="chev_${fam.id}">▾</span>
+      </div>
+    </div>
+    <div class="fam-row-body" id="fambody_${fam.id}">
+      <div class="member-grid">${cards}</div>
+      <div class="fam-actions">
+        <button class="tb-btn" onclick="exportFamilyXLSX('${fam.id}')">↓ XLSX</button>
+        <button class="tb-btn" onclick="exportFamilyCSV('${fam.id}')">↓ CSV</button>
+        <button class="tb-btn danger" onclick="deleteFamily('${fam.id}')">Διαγραφή οικογένειας</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function toggleFam(id) {
@@ -358,7 +378,7 @@ function roleLabel(role) {
 }
 
 // ══════════════════════════════════════════════
-//  CREATE FAMILY
+//  CREATE FAMILY — auto FAM001, FAM002 ...
 // ══════════════════════════════════════════════
 async function createFamily() {
   const { data } = await sb
@@ -369,7 +389,7 @@ async function createFamily() {
 
   let nextNum = 1;
   if (data && data.length) {
-    const last = data[0].family_code;
+    const last = data[0].family_code; // "FAM007"
     nextNum = parseInt(last.replace('FAM',''), 10) + 1;
   }
   const family_code = 'FAM' + String(nextNum).padStart(3, '0');
@@ -383,6 +403,7 @@ async function createFamily() {
   if (error) { alert('Σφάλμα: ' + error.message); return; }
 
   await loadFamilies();
+  // Open the new family and jump straight to Parent 1
   toggleFam(fam.id);
   openMemberForm(fam.id, family_code, 'Parent1', null);
 }
@@ -403,6 +424,27 @@ let curRole    = null;
 let curMemId   = null;
 let formState  = {};
 
+function openMemberForm(famId, famCode, role, memberId) {
+  curFamId   = famId;
+  curFamCode = famCode;
+  curRole    = role;
+  curMemId   = memberId;
+  formState  = {};
+
+  const code = `${famCode}_${role}`;
+  document.getElementById('form-code-lbl').textContent = code;
+  document.getElementById('form-role-lbl').textContent = roleLabel(role);
+
+  const isParent = role.startsWith('Parent');
+  document.getElementById('form-body').innerHTML = isParent
+    ? buildParentForm(code)
+    : buildChildForm(code);
+
+  document.getElementById('save-msg').style.display = 'none';
+  showView('form');
+  window.scrollTo(0, 0);
+}
+
 async function openMemberFormForEdit(memberId) {
   const { data: m } = await sb.from('members').select('*').eq('id', memberId).single();
   if (!m) return;
@@ -413,7 +455,7 @@ async function openMemberFormForEdit(memberId) {
   curMemId   = memberId;
   formState  = { ...(m.data || {}) };
 
-  const code = curFamCode + '_' + m.role;
+  const code = `${curFamCode}_${m.role}`;
   document.getElementById('form-code-lbl').textContent = code;
   document.getElementById('form-role-lbl').textContent = roleLabel(m.role);
 
@@ -422,23 +464,27 @@ async function openMemberFormForEdit(memberId) {
     ? buildParentForm(code)
     : buildChildForm(code);
 
-  setTimeout(function() { restoreForm(formState); }, 60);
+  setTimeout(() => restoreForm(formState), 60);
   document.getElementById('save-msg').style.display = 'none';
   showView('form');
   window.scrollTo(0, 0);
 }
 
+// openMemberForm handles both new & edit — if memberId is non-null, load existing data
 async function openMemberForm(famId, famCode, role, memberId) {
   if (memberId) { await openMemberFormForEdit(memberId); return; }
   
+  // Check if we're switching tabs within the same form — try to restore
   const saved = formPersistence.load();
   if (saved && saved.curFamCode === famCode && saved.curRole === role) {
+    // Restore previous form state
     curFamId   = saved.curFamId;
     curFamCode = saved.curFamCode;
     curRole    = saved.curRole;
     curMemId   = saved.curMemId;
     formState  = saved.formState || {};
   } else {
+    // New form
     curFamId   = famId;
     curFamCode = famCode;
     curRole    = role;
@@ -446,7 +492,7 @@ async function openMemberForm(famId, famCode, role, memberId) {
     formState  = {};
   }
 
-  const code = famCode + '_' + role;
+  const code = `${famCode}_${role}`;
   document.getElementById('form-code-lbl').textContent = code;
   document.getElementById('form-role-lbl').textContent = roleLabel(role);
 
@@ -454,7 +500,7 @@ async function openMemberForm(famId, famCode, role, memberId) {
     ? buildParentForm(code)
     : buildChildForm(code);
 
-  setTimeout(function() { restoreForm(formState); }, 60);
+  setTimeout(() => restoreForm(formState), 60);
   document.getElementById('save-msg').style.display = 'none';
   showView('form');
   window.scrollTo(0, 0);
@@ -466,11 +512,13 @@ function goBackToFamilies() {
 }
 
 async function saveMember() {
+  // Validate AMKA
   const amkaFields = document.querySelectorAll('[id$="_AMKA"]');
   let valid = true;
-  amkaFields.forEach(function(f) { if (!validateAMKA(f.id)) valid = false; });
+  amkaFields.forEach(f => { if (!validateAMKA(f.id)) valid = false; });
   if (!valid) return;
 
+  // Check required fields and warn
   const required = [
     { suffix: '_Examination_Date',  label: 'Ημερομηνία' },
     { suffix: '_Full_Name',         label: 'Ονοματεπώνυμο' },
@@ -479,10 +527,44 @@ async function saveMember() {
     { suffix: '_Sex',               label: 'Φύλο' },
   ];
   
+  // Additional fields to check (Medical history, Risk factors, etc.)
+  const allFields = [
+    { suffix: '_Diabetes_Mellitus',  label: 'Σακχαρώδης Διαβήτης', category: 'Ιστορικό' },
+    { suffix: '_Hyperlipidaemia',    label: 'Υπερλιπιδαιμία', category: 'Ιστορικό' },
+    { suffix: '_Elevated_Lpa',       label: 'Αυξημένη Lpa', category: 'Ιστορικό' },
+    { suffix: '_Arterial_Hypertension', label: 'Υπέρταση', category: 'Ιστορικό' },
+    { suffix: '_Smoking',            label: 'Κάπνισμα', category: 'Ιστορικό' },
+    { suffix: '_Alcoholism',         label: 'Αλκοολισμός', category: 'Ιστορικό' },
+    { suffix: '_Cerebrovascular_Accident', label: 'ΑΕΕ', category: 'Ιστορικό' },
+    { suffix: '_CAD',                label: 'Στεφανιαία Νόσος (ΣΝ)', category: 'Ιστορικό' },
+    { suffix: '_Myocardial_Infarction', label: 'ΟΕΜ', category: 'Ιστορικό' },
+    { suffix: '_CABG',               label: 'CABG', category: 'Ιστορικό' },
+    { suffix: '_PTCA',               label: 'PTCA', category: 'Ιστορικό' },
+    { suffix: '_Heart_Failure',      label: 'Καρδιακή Ανεπάρκεια', category: 'Ιστορικό' },
+  ];
+  
   const missing = [];
-  required.forEach(function(r) {
+  const missingOptional = [];
+  
+  // Check required fields
+  required.forEach(r => {
     const el = document.getElementById(curFamCode + '_' + curRole + r.suffix);
     if (el && !el.value) missing.push(r.label);
+  });
+  
+  // Check optional fields (medical history) - skip family history for children except Cardiovascular Death
+  allFields.forEach(f => {
+    const el = document.getElementById(curFamCode + '_' + curRole + f.suffix);
+    if (el) {
+      const val = el.value || formState[curFamCode + '_' + curRole + f.suffix];
+      // Skip family history fields in child forms (except Cardiovascular Death)
+      if (curRole.startsWith('Child') && f.suffix.startsWith('_Family_History_') && f.suffix !== '_Cardiovascular_Death') {
+        return; // Skip
+      }
+      if (!val) {
+        missingOptional.push(f.label);
+      }
+    }
   });
   
   if (missing.length) {
@@ -491,6 +573,14 @@ async function saveMember() {
     msg.className = 'save-msg err';
     msg.textContent = 'Προσοχή: Λείπουν υποχρεωτικά πεδία: ' + missing.join(', ');
     if (!confirm('Λείπουν υποχρεωτικά πεδία: ' + missing.join(', ') + '.\nΘέλετε να συνεχίσετε χωρίς αυτά;')) return;
+  }
+  
+  if (missingOptional.length > 0) {
+    const msg = document.getElementById('save-msg');
+    msg.style.display = 'block';
+    msg.className = 'save-msg warn';
+    msg.textContent = 'Προσοχή: Δεν έχουν συμπληρωθεί: ' + missingOptional.join(', ');
+    if (!confirm('Τα παρακάτω πεδία δεν έχουν συμπληρωθεί:\n' + missingOptional.join(', ') + '\n\nΘέλετε να συνεχίσετε;')) return;
   }
 
   const btn = document.getElementById('save-btn');
@@ -519,37 +609,35 @@ async function saveMember() {
     msg.className = 'save-msg ok';
     msg.textContent = 'Αποθηκεύτηκε επιτυχώς.';
     formPersistence.clear();
-    setTimeout(function() { loadFamilies(); }, 900);
+    setTimeout(() => loadFamilies(), 900);
   }
 }
 
 // ══════════════════════════════════════════════
 //  FORM FIELD HELPERS
 // ══════════════════════════════════════════════
-function $(id) { return document.getElementById(id); }
+const $ = id => document.getElementById(id);
 
-function inp(id, label, type, ph) {
-  type = type || 'text';
-  ph = ph || '';
-  return '<div class="fld"><span class="lbl">' + label + '</span>' +
-    '<input type="' + type + '" id="' + id + '" placeholder="' + ph + '" oninput="formState[\'' + id + '\']=this.value; triggerAutoSave()">' +
-    '<span class="field-err" id="' + id + '_err"></span></div>';
+function inp(id, label, type='text', ph='') {
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <input type="${type}" id="${id}" placeholder="${ph}" oninput="formState['${id}']=this.value; triggerAutoSave()" onkeypress="if(event.which==13 || event.keyCode==13){event.preventDefault(); saveMember(); return false;}">
+    <span class="field-err" id="${id}_err"></span>
+  </div>`;
 }
-
 function amka(id, label) {
-  return '<div class="fld"><span class="lbl">' + label + '</span>' +
-    '<input type="text" id="' + id + '" placeholder="11 ψηφία" maxlength="11" ' +
-    'oninput="formState[\'' + id + '\']=this.value; validateAMKA(\'' + id + '\'); triggerAutoSave()" ' +
-    'onblur="validateAMKA(\'' + id + '\')">' +
-    '<span class="field-err" id="' + id + '_err"></span></div>';
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <input type="text" id="${id}" placeholder="11 ψηφία" maxlength="11"
+      oninput="formState['${id}']=this.value; validateAMKA('${id}'); triggerAutoSave()"
+      onkeypress="if(event.which==13 || event.keyCode==13){event.preventDefault(); saveMember(); return false;}"
+      onblur="validateAMKA('${id}')">
+    <span class="field-err" id="${id}_err"></span>
+  </div>`;
 }
-
 function validateAMKA(id) {
-  var el = document.getElementById(id);
-  var val = (el ? el.value : '').replace(/\D/g,'');
-  var err = document.getElementById(id + '_err');
+  const val = (document.getElementById(id)?.value || '').replace(/\D/g,'');
+  const err = document.getElementById(id+'_err');
   if (!err) return true;
-  if (!val) { err.textContent = ''; return true; }
+  if (!val) { err.textContent=''; return true; }
   if (val.length !== 11) {
     err.textContent = 'Το ΑΜΚΑ πρέπει να έχει ακριβώς 11 ψηφία (έχει ' + val.length + ')';
     return false;
@@ -557,463 +645,1118 @@ function validateAMKA(id) {
   err.textContent = '';
   return true;
 }
-
 function sel(id, label, opts) {
-  var options = opts.map(function(o) { return '<option>' + o + '</option>'; }).join('');
-  return '<div class="fld"><span class="lbl">' + label + '</span>' +
-    '<select id="' + id + '" onchange="formState[\'' + id + '\']=this.value; triggerAutoSave()">' +
-    '<option value="">—</option>' + options + '</select></div>';
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <select id="${id}" onchange="formState['${id}']=this.value; triggerAutoSave()" onkeypress="if(event.which==13 || event.keyCode==13){event.preventDefault(); saveMember(); return false;}">
+      <option value="">—</option>${opts.map(o=>`<option>${o}</option>`).join('')}
+    </select>
+  </div>`;
 }
-
 function yn(id, label) {
-  return '<div class="fld"><span class="lbl">' + label + '</span>' +
-    '<div class="yn">' +
-    '<button class="yn-b" data-yn="' + id + '" data-val="1" onclick="setYN(\'' + id + '\',\'1\')">ΝΑΙ</button>' +
-    '<button class="yn-b" data-yn="' + id + '" data-val="0" onclick="setYN(\'' + id + '\',\'0\')">ΟΧΙ</button>' +
-    '</div></div>';
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <div class="yn">
+      <button class="yn-b" data-yn="${id}" data-val="1" onclick="setYN('${id}','1')">ΝΑΙ</button>
+      <button class="yn-b" data-yn="${id}" data-val="0" onclick="setYN('${id}','0')">ΟΧΙ</button>
+    </div>
+  </div>`;
 }
-
-function setYN(id, val) {
-  var buttons = document.querySelectorAll('[data-yn="' + id + '"]');
-  var currentVal = formState[id];
-  
-  if (currentVal === val) {
-    buttons.forEach(function(b) { b.classList.remove('y','n'); });
-    formState[id] = null;
-  } else {
-    buttons.forEach(function(b) {
-      b.classList.remove('y','n');
-      if (b.dataset.val == val) b.classList.add(val === '1' ? 'y' : 'n');
-    });
-    formState[id] = val;
-  }
-  triggerAutoSave();
-}
-
+/* setYN defined below in toggleMetS block */
 function nyha(pfx) {
-  var btns = ['I','II','III','IV'].map(function(n, i) {
-    return '<button class="nyha-b" data-nyha="' + pfx + '" data-val="' + (i+1) + '" onclick="setNYHA(\'' + pfx + '\',' + (i+1) + ')">' + n + '</button>';
-  }).join('');
-  return '<div class="fld"><span class="lbl">Στάδιο NYHA</span><div class="nyha-g">' + btns + '</div></div>';
+  return `<div class="fld"><span class="lbl">Στάδιο NYHA</span>
+    <div class="nyha-g">${['I','II','III','IV'].map((n,i)=>
+      `<button class="nyha-b" data-nyha="${pfx}" data-val="${i+1}" onclick="setNYHA('${pfx}',${i+1})">${n}</button>`
+    ).join('')}</div>
+  </div>`;
 }
-
 function setNYHA(pfx, val) {
-  document.querySelectorAll('[data-nyha="' + pfx + '"]').forEach(function(b) {
-    b.classList.toggle('sel', parseInt(b.dataset.val) === val);
-  });
-  formState[pfx + '_NYHA_Class'] = val;
+  document.querySelectorAll(`[data-nyha="${pfx}"]`).forEach(b => b.classList.toggle('sel', +b.dataset.val===val));
+  formState[pfx+'_NYHA_Class'] = val;
   triggerAutoSave();
 }
-
 function dutch(pfx) {
-  var opts = ['DEFINITE FH','PROBABLE FH','POSSIBLE FH','UNLIKELY'].map(function(d) {
-    return '<div class="dutch-o" data-dutch="' + pfx + '" data-val="' + d + '" onclick="setDutch(\'' + pfx + '\',\'' + d + '\')">' + d + '</div>';
-  }).join('');
-  return '<div style="font-size:10px;font-family:sans-serif;color:var(--muted);margin-bottom:6px;">' +
-    'Αυτόματη κατηγοριοποίηση βάσει score · &gt;8: Definite · 6–8: Probable · 3–5: Possible · &lt;3: Unlikely</div>' +
-    '<div class="dutch-opts">' + opts + '</div>';
+  return `
+    <div style="font-size:10px;font-family:sans-serif;color:var(--muted);margin-bottom:6px;">
+      Αυτόματη κατηγοριοποίηση βάσει score · &gt;8: Definite · 6–8: Probable · 3–5: Possible · &lt;3: Unlikely
+    </div>
+    <div class="dutch-opts">
+      ${['DEFINITE FH','PROBABLE FH','POSSIBLE FH','UNLIKELY'].map(d=>
+        `<div class="dutch-o" data-dutch="${pfx}" data-val="${d}">${d}</div>`
+      ).join('')}
+    </div>`;
 }
-
 function setDutch(pfx, val) {
-  document.querySelectorAll('[data-dutch="' + pfx + '"]').forEach(function(b) {
-    b.classList.toggle('sel', b.dataset.val === val);
-  });
-  formState[pfx + '_Dutch_Criteria_Result'] = val;
+  document.querySelectorAll(`[data-dutch="${pfx}"]`).forEach(b => b.classList.toggle('sel', b.dataset.val===val));
+  formState[pfx+'_Dutch_Criteria_Result'] = val;
   triggerAutoSave();
 }
-
 function autoDutch(pfx, score) {
-  var s = parseInt(score);
-  var cat = '';
-  if (isNaN(s)) cat = '';
-  else if (s > 8) cat = 'DEFINITE FH';
-  else if (s >= 6) cat = 'PROBABLE FH';
-  else if (s >= 3) cat = 'POSSIBLE FH';
-  else cat = 'UNLIKELY';
+  const s = parseInt(score);
+  let cat = '';
+  if      (isNaN(s))  cat = '';
+  else if (s > 8)     cat = 'DEFINITE FH';
+  else if (s >= 6)    cat = 'PROBABLE FH';
+  else if (s >= 3)    cat = 'POSSIBLE FH';
+  else                cat = 'UNLIKELY';
   if (cat) setDutch(pfx, cat);
 }
+function medGrid(pfx, list, onToggle) {
+  return `<div class="meds-grid">${list.map(m => {
+    const key = pfx + '_' + m.replace(/[^a-zA-Z0-9]/g,'_');
+    const cb = onToggle ? `toggleMed('${key}', '${onToggle}')` : `toggleMed('${key}')`;
+    return `<div class="med-item" id="${key}" onclick="${cb}"><div class="med-box"></div><span>${m}</span></div>`;
+  }).join('')}</div>`;
+}
 
-function medGrid(pfx, list) {
-  var items = list.map(function(m) {
-    var key = pfx + '_' + m.replace(/[^a-zA-Z0-9]/g, '_');
-    return '<div class="med-item" id="' + key + '" onclick="toggleMed(\'' + key + '\')"><div class="med-box"></div><span>' + m + '</span></div>';
+function medGridWithOther(pfx, list, onToggle) {
+  const items = list.map(m => {
+    const key = pfx + '_' + m.replace(/[^a-zA-Z0-9]/g,'_');
+    const cb = onToggle ? `toggleMed('${key}', '${onToggle}')` : `toggleMed('${key}')`;
+    return `<div class="med-item" id="${key}" onclick="${cb}"><div class="med-box"></div><span>${m}</span></div>`;
   }).join('');
-  return '<div class="meds-grid">' + items + '</div>';
+  
+  const otherKey = pfx + '_Other_Medication';
+  const otherCheckboxId = pfx + '_' + 'Other'.replace(/[^a-zA-Z0-9]/g,'_');
+  
+  return `<div class="meds-grid">${items}</div>
+    <div id="${otherKey}_container" style="display:none;margin-top:10px;">
+      <input type="text" id="${otherKey}" placeholder="Καταγράψτε το φάρμακο..." 
+        oninput="formState['${otherKey}']=this.value; triggerAutoSave()"
+        onkeypress="if(event.which==13 || event.keyCode==13){event.preventDefault(); saveMember(); return false;}">
+    </div>
+    <script>
+      (function() {
+        const allCheckboxes = document.querySelectorAll('.med-item[id*="${pfx}"]');
+        let otherCheckbox = null;
+        allCheckboxes.forEach(cb => {
+          if (cb.textContent.includes('Άλλο')) {
+            otherCheckbox = cb;
+          }
+        });
+        if (otherCheckbox) {
+          const origOnclick = otherCheckbox.onclick;
+          otherCheckbox.onclick = function(e) {
+            e.preventDefault();
+            const key = this.id;
+            formState[key] = this.classList.toggle('on') ? 1 : 0;
+            triggerAutoSave();
+            const container = document.getElementById('${otherKey}_container');
+            const textField = document.getElementById('${otherKey}');
+            if (this.classList.contains('on')) {
+              container.style.display = 'block';
+              setTimeout(() => textField.focus(), 50);
+            } else {
+              container.style.display = 'none';
+              textField.value = '';
+              formState['${otherKey}'] = '';
+              triggerAutoSave();
+            }
+          };
+          if (formState[otherCheckbox.id] === 1 || formState[otherCheckbox.id] === '1') {
+            document.getElementById('${otherKey}_container').style.display = 'block';
+          }
+        }
+      })();
+    </script>`;
 }
 
-function toggleMed(key) {
-  var el = document.getElementById(key);
-  if (el) {
-    el.classList.toggle('on');
-    formState[key] = el.classList.contains('on') ? 1 : 0;
-    triggerAutoSave();
-  }
+function toggleMed(key, callbackFn) {
+  formState[key] = $(key).classList.toggle('on') ? 1 : 0;
+  triggerAutoSave();
+  if (callbackFn && typeof window[callbackFn] === 'function') window[callbackFn]();
 }
-
-function sec(label) { return '<div class="sec-lbl">' + label + '</div>'; }
-
+/* ─────────────────────────────────── */
+function sec(label) { return `<div class="sec-lbl">${label}</div>`; }
 function labGrid(pfx, labs) {
-  var items = labs.map(function(l) { return numInp(pfx + '_' + l, l); }).join('');
-  return '<div class="grid4">' + items + '</div>';
+  return `<div class="grid4">${labs.map(l => numInp(pfx+'_'+l, l)).join('')}</div>`;
 }
-
-function numInp(id, label, ph) {
-  ph = ph || '';
-  return '<div class="fld"><span class="lbl">' + label + '</span>' +
-    '<input type="text" id="' + id + '" placeholder="' + ph + '" ' +
-    'oninput="onlyNumericInput(this); formState[\'' + id + '\']=this.value; triggerAutoSave()">' +
-    '<span class="field-err" id="' + id + '_err"></span></div>';
-}
-
 function numInpBMI(id, label, ph, pfx) {
-  return '<div class="fld"><span class="lbl">' + label + '</span>' +
-    '<input type="text" id="' + id + '" placeholder="' + ph + '" ' +
-    'oninput="onlyNumericInput(this); formState[\'' + id + '\']=this.value; calcBMI(\'' + pfx + '\'); triggerAutoSave()">' +
-    '<span class="field-err" id="' + id + '_err"></span></div>';
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <input type="text" id="${id}" placeholder="${ph}"
+      oninput="onlyNumericInput(this); formState['${id}']=this.value; calcBMI('${pfx}'); triggerAutoSave()"
+      onkeypress="if(event.which==13 || event.keyCode==13){event.preventDefault(); saveMember(); return false;}">
+    <span class="field-err" id="${id}_err"></span>
+  </div>`;
 }
-
 function onlyNumericInput(el) {
-  var before = el.value;
+  const before = el.value;
   el.value = el.value.replace(/[^0-9.]/g, '');
-  var errEl = document.getElementById(el.id + '_err');
-  if (errEl) errEl.textContent = (before !== el.value) ? 'Μόνο αριθμοί' : '';
+  const errId = el.id + '_err';
+  const errEl = document.getElementById(errId);
+  if (errEl) errEl.textContent = (before !== el.value) ? 'Δεν εισάγετε αριθμό' : '';
+}
+/* numeric input helper (replaces plain number inputs that need the guard) */
+function numInp(id, label, ph='') {
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <input type="text" id="${id}" placeholder="${ph}"
+      oninput="onlyNumericInput(this); formState['${id}']=this.value; triggerAutoSave()"
+      onkeypress="if(event.which==13 || event.keyCode==13){event.preventDefault(); saveMember(); return false;}">
+    <span class="field-err" id="${id}_err"></span>
+  </div>`;
 }
 
+/* ── BMI auto-calc ── */
 function calcBMI(pfx) {
-  var hEl = document.getElementById(pfx + '_Height_cm');
-  var wEl = document.getElementById(pfx + '_Weight_kg');
-  var h = parseFloat(hEl ? hEl.value : '');
-  var w = parseFloat(wEl ? wEl.value : '');
-  var bmiEl = document.getElementById(pfx + '_BMI_display');
-  var bmiInp = document.getElementById(pfx + '_BMI');
+  const h = parseFloat(document.getElementById(pfx+'_Height_cm')?.value||'');
+  const w = parseFloat(document.getElementById(pfx+'_Weight_kg')?.value||'');
+  const bmiEl = document.getElementById(pfx+'_BMI_display');
+  const bmiInp = document.getElementById(pfx+'_BMI');
   if (bmiEl) {
     if (h > 0 && w > 0) {
-      var bmi = (w / Math.pow(h/100, 2)).toFixed(1);
+      const bmi = (w / ((h/100)**2)).toFixed(1);
       bmiEl.textContent = bmi;
-      if (bmiInp) { bmiInp.value = bmi; formState[pfx + '_BMI'] = bmi; triggerAutoSave(); }
+      if (bmiInp) { bmiInp.value = bmi; formState[pfx+'_BMI'] = bmi; triggerAutoSave(); }
     } else {
       bmiEl.textContent = '—';
     }
   }
 }
-
 function bmiDisplay(pfx) {
-  return '<div class="fld"><span class="lbl">BMI (αυτόματο)</span>' +
-    '<div style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:sans-serif;background:var(--bg);color:var(--text);">' +
-    '<span id="' + pfx + '_BMI_display">—</span> kg/m²</div>' +
-    '<input type="hidden" id="' + pfx + '_BMI"></div>';
+  return `<div class="fld"><span class="lbl">BMI (αυτόματο)</span>
+    <div style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:sans-serif;background:var(--bg);color:var(--text);">
+      <span id="${pfx}_BMI_display">—</span> kg/m²
+    </div>
+    <input type="hidden" id="${pfx}_BMI">
+  </div>`;
 }
 
+// /* ── Morisky 4-item scale ── */
+function moriskiSection(pfx) {
+  const qs = [
+    'Υπάρχουν (κάποιες) φορές που ξεχνάτε να πάρετε το φάρμακό σας;',
+    'Υπήρξαν μέρες τις τελευταίες 2 εβδομάδες που δεν πήρατε το φάρμακό σας για άλλους λόγους;',
+    'Έχετε μειώσει ή διακόψει το φάρμακο χωρίς να ενημερώσετε τον γιατρό επειδή αισθανθήκατε χειρότερα;',
+    'Όταν ταξιδεύετε, ξεχνάτε να πάρετε μαζί το φάρμακό σας;',
+    'Πήρατε όλο σας το φάρμακο εχθές;',
+    'Όταν τα συμπτώματα είναι υπό έλεγχο, σταματάτε το φάρμακο;',
+    'Αισθάνεστε ότι η λήψη φαρμάκων είναι ταλαιπωρία;'
+  ];
+
+  const keys = ['Q1','Q2','Q3','Q4','Q5','Q6','Q7'];
+
+  let html = '<div class="grid2">';
+  qs.forEach((q,i) => { html += yn(pfx+'_'+keys[i], q); });
+  html += '</div>';
+
+  // Q8 (special scale)
+  html += `
+    <div class="fld">
+      <span class="lbl">Πόσο συχνά δυσκολεύεστε να θυμάστε να πάρετε όλο το φάρμακό σας;</span>
+      <select id="${pfx}_Q8" onchange="calcMorisky('${pfx}')">
+        <option value="">—</option>
+        <option value="1">Ποτέ / Σπάνια</option>
+        <option value="0.75">Σποραδικά</option>
+        <option value="0.5">Μερικές φορές</option>
+        <option value="0.25">Συνήθως</option>
+        <option value="0">Συνεχώς</option>
+      </select>
+    </div>
+  `;
+
+  html += `<div class="fld" style="margin-top:6px;">
+    <span class="lbl">Αξιολόγηση Morisky (αυτόματο)</span>
+    <div id="${pfx}_Morisky_Result"
+      style="padding:7px 10px;border:1px solid var(--border2);
+      border-radius:var(--r);font-size:12px;font-family:sans-serif;
+      background:var(--bg);color:var(--text);">—</div>
+    <input type="hidden" id="${pfx}_Morisky_Score">
+  </div>`;
+
+  return html;
+}
+
+
+function calcMorisky(pfx) {
+  let score = 0;
+
+  // Q1–Q4, Q6–Q7: Ναι=0, Όχι=1
+  const normalQs = ['Q1','Q2','Q3','Q4','Q6','Q7'];
+  normalQs.forEach(k => {
+    const val = formState[pfx+'_'+k];
+    if (val === '0') score += 1; // Όχι = 1 point
+  });
+
+  // Q5: Ναι=1, Όχι=0 (reverse logic)
+  const q5 = formState[pfx+'_Q5'];
+  if (q5 === '1') score += 1;
+
+  // Q8: weighted
+  const q8el = document.getElementById(pfx+'_Q8');
+  if (q8el && q8el.value !== '') {
+    score += parseFloat(q8el.value);
+  }
+
+  // Result classification
+  let result = '';
+  if (score < 6) {
+    result = 'Χαμηλή συμμόρφωση (' + score.toFixed(2) + '/8)';
+  } else if (score < 8) {
+    result = 'Μέτρια συμμόρφωση (' + score.toFixed(2) + '/8)';
+  } else {
+    result = 'Υψηλή συμμόρφωση (8/8)';
+  }
+
+  // Update UI
+  const el = document.getElementById(pfx+'_Morisky_Result');
+  if (el) el.textContent = result;
+
+  const inp = document.getElementById(pfx+'_Morisky_Score');
+  if (inp) {
+    inp.value = score.toFixed(2);
+    formState[pfx+'_Morisky_Score'] = score;
+  }
+}
+
+// /* ── Morisky 4-item scale ── */
+// function moriskiSection(pfx) {
+//   const qs = [
+//     'Ξεχνάτε να πάρετε τα φάρμακά σας;',
+//     'Δεν παίρνετε τα φάρμακά σας μερικές φορές;',
+//     'Σταματάτε τα φάρμακα όταν αισθάνεστε καλά;',
+//     'Σταματάτε τα φάρμακα όταν αισθάνεστε χειρότερα;'
+//   ];
+//   const keys = ['Morisky_Q1','Morisky_Q2','Morisky_Q3','Morisky_Q4'];
+//   let html = '<div class="grid2">';
+//   qs.forEach((q,i) => { html += yn(pfx+'_'+keys[i], q); });
+//   html += '</div>';
+//   html += `<div class="fld" style="margin-top:6px;"><span class="lbl">Αξιολόγηση Morisky (αυτόματο)</span>
+//     <div id="${pfx}_Morisky_Result" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:sans-serif;background:var(--bg);color:var(--text);">—</div>
+//     <input type="hidden" id="${pfx}_Morisky_Score">
+//   </div>`;
+//   return html;
+// }
+// function calcMorisky(pfx) {
+//   const keys = ['Morisky_Q1','Morisky_Q2','Morisky_Q3','Morisky_Q4'];
+//   let score = 0;
+//   keys.forEach(k => { if (formState[pfx+'_'+k] === '1') score++; });
+//   let result = '';
+//   if      (score === 0) result = 'Υψηλή συμμόρφωση (0/4)';
+//   else if (score <= 2)  result = 'Μέτρια συμμόρφωση (' + score + '/4)';
+//   else                  result = 'Χαμηλή συμμόρφωση (' + score + '/4)';
+//   const el = document.getElementById(pfx+'_Morisky_Result');
+//   if (el) el.textContent = result;
+//   const inp2 = document.getElementById(pfx+'_Morisky_Score');
+//   if (inp2) { inp2.value = score; formState[pfx+'_Morisky_Score'] = score; }
+// }
+
+/* ── YN with conditional sub-fields ── */
 function ynConditional(id, label, subHtml) {
-  return '<div class="fld"><span class="lbl">' + label + '</span>' +
-    '<div class="yn">' +
-    '<button class="yn-b" data-yn="' + id + '" data-val="1" onclick="setYN(\'' + id + '\',\'1\'); document.getElementById(\'sub_' + id + '\').style.display=\'block\';">ΝΑΙ</button>' +
-    '<button class="yn-b" data-yn="' + id + '" data-val="0" onclick="setYN(\'' + id + '\',\'0\'); document.getElementById(\'sub_' + id + '\').style.display=\'none\';">ΟΧΙ</button>' +
-    '</div>' +
-    '<div id="sub_' + id + '" style="display:none;margin-top:6px;padding:8px;border-left:3px solid var(--blue-mid);background:var(--blue-bg);border-radius:0 var(--r) var(--r) 0;">' +
-    subHtml + '</div></div>';
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <div class="yn">
+      <button class="yn-b" data-yn="${id}" data-val="1" onclick="setYN('${id}','1'); document.getElementById('sub_${id}').style.display='block';">ΝΑΙ</button>
+      <button class="yn-b" data-yn="${id}" data-val="0" onclick="setYN('${id}','0'); document.getElementById('sub_${id}').style.display='none';">ΟΧΙ</button>
+    </div>
+    <div id="sub_${id}" style="display:none;margin-top:6px;padding:8px;border-left:3px solid var(--blue-mid);background:var(--blue-bg);border-radius:0 var(--r) var(--r) 0;">
+      ${subHtml}
+    </div>
+  </div>`;
+}
+
+/* ── YN with child-form warning ── */
+function ynChildWarn(id, label) {
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <div class="yn">
+      <button class="yn-b" data-yn="${id}" data-val="1" onclick="setYN('${id}','1'); showChildWarn()">ΝΑΙ</button>
+      <button class="yn-b" data-yn="${id}" data-val="0" onclick="setYN('${id}','0'); showChildWarn()">ΟΧΙ</button>
+    </div>
+  </div>`;
+}
+
+function cardiacDeathWarn(id, label) {
+  const baseId = id.replace(/_Cardiovascular_Death$/, '');
+  return `<div class="fld"><span class="lbl">${label}</span>
+    <div class="yn">
+      <button class="yn-b" data-yn="${id}" data-val="1" onclick="setYN('${id}','1'); showCardiacDeathOptions('${baseId}'); showChildWarn()">ΝΑΙ</button>
+      <button class="yn-b" data-yn="${id}" data-val="0" onclick="setYN('${id}','0'); hideCardiacDeathOptions('${baseId}'); showChildWarn()">ΟΧΙ</button>
+    </div>
+    <div id="cardiacdeath-opts-${baseId}" style="margin-top:8px;display:none;gap:8px;flex-wrap:wrap;" class="dutch-opts">
+      <button class="dutch-o" data-id="${baseId}_Cardiovascular_Death_Who" data-val="Father" onclick="setCardiacDeathWho('${baseId}','Father')">Πατέρας</button>
+      <button class="dutch-o" data-id="${baseId}_Cardiovascular_Death_Who" data-val="Mother" onclick="setCardiacDeathWho('${baseId}','Mother')">Μητέρα</button>
+      <button class="dutch-o" data-id="${baseId}_Cardiovascular_Death_Who" data-val="Both" onclick="setCardiacDeathWho('${baseId}','Both')">Και οι δύο</button>
+    </div>
+  </div>`;
+}
+
+function showCardiacDeathOptions(baseId) {
+  const el = document.getElementById(`cardiacdeath-opts-${baseId}`);
+  if (el) el.style.display = 'flex';
+}
+
+function hideCardiacDeathOptions(baseId) {
+  const el = document.getElementById(`cardiacdeath-opts-${baseId}`);
+  if (el) el.style.display = 'none';
+}
+
+function setCardiacDeathWho(baseId, value) {
+  const id = baseId + '_Cardiovascular_Death_Who';
+  document.querySelectorAll(`[data-id="${id}"]`).forEach(b => b.classList.remove('sel'));
+  document.querySelector(`[data-id="${id}"][data-val="${value}"]`)?.classList.add('sel');
+  setData(id, value);
+  triggerAutoSave();
+}
+
+function showChildWarn() {
+  const w = document.getElementById('child-fam-warn');
+  if (w) { w.style.display = 'block'; setTimeout(() => { w.style.display = 'none'; }, 3500); }
 }
 
 function inpDutch(id, pfx) {
+  const esc = id.replace(/'/g, "\\'");
+  const pfxEsc = pfx.replace(/'/g, "\\'");
   return '<div class="fld"><span class="lbl">Total score (0–31)</span>' +
-    '<input type="text" id="' + id + '" placeholder="0–31" ' +
-    'oninput="onlyNumericInput(this); if(parseInt(this.value)>31){this.value=31;} formState[\'' + id + '\']=this.value; autoDutch(\'' + pfx + '\',this.value); triggerAutoSave()">' +
+    '<input type="text" id="' + id + '" placeholder="0–31"' +
+    ' oninput="onlyNumericInput(this); if(parseInt(this.value)>31){this.value=31;} formState[&quot;' + esc + '&quot;]=this.value; autoDutch(&quot;' + pfxEsc + '&quot;,this.value); triggerAutoSave()"' +
+    ' onkeypress="if(event.which==13 || event.keyCode==13){event.preventDefault(); saveMember(); return false;}">' +
     '<span class="field-err" id="' + id + '_err"></span></div>';
 }
 
 function metsGrid(pfx) {
-  var items = [
-    {key:'MetS_TRG_150', label:'TRG > 150 ή υπολιπιδαιμικά'},
-    {key:'MetS_HDL_low', label:'HDL < 40 (άνδρες) / < 50 (γυναίκες)'},
-    {key:'MetS_Glu_100', label:'ΣΔ ή Glu > 100'},
+  const items = [
+    {key:'MetS_TRG_150',   label:'TRG > 150 ή υπολιπιδαιμικά'},
+    {key:'MetS_HDL_low',   label:'HDL < 40 (άνδρες) / < 50 (γυναίκες) ή υπολιπιδαιμικά'},
+    {key:'MetS_Glu_100',   label:'ΣΔ ή Glu > 100'},
     {key:'MetS_BP_130_85', label:'Υπέρταση ή ΑΠ > 130/85'},
-    {key:'MetS_Waist', label:'Περίμετρος μέσης > 102/88 cm'}
+    {key:'MetS_Waist',     label:'Περίμετρος μέσης > 102 cm (άνδρες) / > 88 cm (γυναίκες)'},
   ];
-  var html = items.map(function(m) {
-    var key = pfx + '_' + m.key;
-    return '<div class="med-item" id="' + key + '" onclick="toggleMetS(this, \'' + pfx + '\')"><div class="med-box"></div><span>' + m.label + '</span></div>';
-  }).join('');
-  return '<div class="meds-grid">' + html + '</div>';
+  return '<div class="meds-grid">' + items.map(function(m) {
+    const key = pfx + '_' + m.key;
+    return '<div class="med-item" id="' + key + '" onclick="toggleMetS(this, \'' + pfx + '\')">' +
+      '<div class="med-box"></div><span>' + m.label + '</span></div>';
+  }).join('') + '</div>';
 }
-
 function toggleMetS(el, pfx) {
+  const key = el.id;
   el.classList.toggle('on');
-  formState[el.id] = el.classList.contains('on') ? 1 : 0;
-  var count = 0;
-  document.querySelectorAll('[id^="' + pfx + '_MetS_"]').forEach(function(e) {
-    if (e.classList.contains('on')) count++;
-  });
+  formState[key] = el.classList.contains('on') ? 1 : 0;
+  const allMetS = document.querySelectorAll('[id^="' + pfx + '_MetS_"]');
+  let count = 0;
+  allMetS.forEach(function(e) { if (e.classList.contains('on')) count++; });
   setYN(pfx + '_Metabolic_Syndrome', count >= 3 ? '1' : '0');
   triggerAutoSave();
+}
+
+/* override setYN for Morisky fields to also recalc */
+function setYN(id, val) {
+  const buttons = document.querySelectorAll(`[data-yn="${id}"]`);
+  const currentVal = formState[id];
+  
+  // If clicking the same value, toggle off (unselect)
+  if (currentVal === val) {
+    buttons.forEach(b => b.classList.remove('y','n'));
+    formState[id] = null;
+  } else {
+    // Select new value
+    buttons.forEach(b => {
+      b.classList.remove('y','n');
+      if (b.dataset.val == val) b.classList.add(val==='1'?'y':'n');
+    });
+    formState[id] = val;
+  }
+  
+  triggerAutoSave();
+  
+  // recalc Morisky if relevant
+  const morKeys = ['Morisky_Q1','Morisky_Q2','Morisky_Q3','Morisky_Q4'];
+  morKeys.forEach(k => {
+    if (id.endsWith('_'+k)) {
+      const pfx2 = id.slice(0, id.length - k.length - 1);
+      calcMorisky(pfx2);
+    }
+  });
 }
 
 // ══════════════════════════════════════════════
 //  PARENT FORM HTML
 // ══════════════════════════════════════════════
 function buildParentForm(pfx) {
-  return '<div class="sec-card"><div class="sec-body">' +
-    sec('Δημογραφικά') +
-    '<div class="grid3">' +
-      inp(pfx + '_Examination_Date', 'Ημερομηνία', 'date') +
-      inp(pfx + '_Full_Name', 'Ονοματεπώνυμο *', 'text', 'Όνομα Επώνυμο') +
-      amka(pfx + '_AMKA', 'ΑΜΚΑ *') +
-    '</div>' +
-    '<div class="grid3">' +
-      inp(pfx + '_Date_of_Birth', 'Ημερομηνία Γέννησης *', 'date') +
-      sel(pfx + '_Sex', 'Φύλο *', ['ΑΝΔΡΑΣ','ΓΥΝΑΙΚΑ']) +
-      numInpBMI(pfx + '_Height_cm', 'Ύψος (cm)', 'cm', pfx) +
-    '</div>' +
-    '<div class="grid3">' +
-      numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) +
-      bmiDisplay(pfx) +
-      yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') +
-    '</div>' +
-    sec('Ιστορικό — Παράγοντες Κινδύνου') +
-    '<div class="grid4">' +
-      yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') +
-      yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') +
-      yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') +
-      numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') +
-    '</div>' +
-    '<div class="grid4">' +
-      yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') +
-      yn(pfx + '_Smoking', 'Κάπνισμα') +
-      yn(pfx + '_Alcoholism', 'Αλκοολισμός') +
-      yn(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα') +
-    '</div>' +
-    sec('Ιστορικό — Καρδιαγγειακά') +
-    '<div class="grid4">' +
-      yn(pfx + '_Cerebrovascular_Accident', 'ΑΕΕ') +
-      yn(pfx + '_CAD', 'ΣΝ') +
-      sel(pfx + '_CAD_Number_of_Vessels', 'Αριθμός αγγείων', ['1','2','3']) +
-      yn(pfx + '_Myocardial_Infarction', 'ΟΕΜ') +
-    '</div>' +
-    '<div class="grid4">' +
-      yn(pfx + '_CABG', 'CABG') +
-      yn(pfx + '_PTCA', 'PTCA') +
-      ynConditional(pfx + '_Heart_Failure', 'Καρδιακή Ανεπάρκεια', nyha(pfx)) +
-      yn(pfx + '_Angina_Pectoris', 'Στηθάγχη') +
-    '</div>' +
-    '<div class="grid3">' +
-      yn(pfx + '_Carotid_Artery_Disease', 'Νόσος Καρωτίδων') +
-      yn(pfx + '_Peripheral_Artery_Disease', 'Περιφερική Αγγειοπάθεια') +
-      yn(pfx + '_COPD', 'ΧΑΠ') +
-    '</div>' +
-    sec('Οικογενειακό Ιστορικό') +
-    '<div class="grid4">' +
-      yn(pfx + '_Family_History_Diabetes', 'Σακχαρώδης Διαβήτης (οικ.)') +
-      yn(pfx + '_Family_History_Hyperlipidaemia', 'Υπερλιπιδαιμία (οικ.)') +
-      yn(pfx + '_Family_History_Elevated_Lpa', 'Αυξημένη Lpa (οικ.)') +
-      yn(pfx + '_Family_History_CVA', 'ΑΕΕ (οικ.)') +
-    '</div>' +
-    '<div class="grid3">' +
-      yn(pfx + '_Family_History_Premature_CAD', 'Πρώιμη ΣΝ (οικ.)') +
-      yn(pfx + '_Family_History_CAD', 'ΣΝ (οικ.)') +
-      yn(pfx + '_Cardiovascular_Death', 'Καρδιαγγειακός Θάνατος (οικ.)') +
-    '</div>' +
-    sec('Καρδιαγγειακά Φάρμακα') +
-    medGrid(pfx, ['Β-Αναστολέας','Διουρητικά','Διλτιαζέμη','Αμλοδιπίνη','Αναστολείς ΜΕΑ','Νιτρώδη','ATII Αναστολέας','PCSK9 Αναστολείς','Στατίνες','Εζετιμίμπη','Κλοπιδογρέλη','Φιβράτες','Ασπιρίνη','Διγοξίνη','Τικαγρελόρη','Απιξαμπάνη','Ριβαροξαμπάνη','Νταμπιγκατράνη']) +
-    sec('Λοιπά Φάρμακα') +
-    medGrid(pfx, ['Μετφορμίνη','SGLT2 Αναστολείς','GLP1 Αναστολείς','DPP4 Αναστολείς','Ινσουλίνη']) +
-    sec('Μεταβολικό Σύνδρομο') +
-    '<div class="grid2" style="margin-bottom:8px;">' +
-      yn(pfx + '_Metabolic_Syndrome', 'Μεταβολικό Σύνδρομο') +
-      '<div></div>' +
-    '</div>' +
-    metsGrid(pfx) +
-    sec('Φυσική Εξέταση') +
-    '<div class="grid2">' +
-      yn(pfx + '_Tendon_Xanthomas', 'Τενόντια Ξανθώματα') +
-      yn(pfx + '_Arcus_Cornealis', 'Arcus Cornealis') +
-    '</div>' +
-    sec('Ηχωκαρδιογραφικές Παράμετροι') +
-    '<div class="grid3">' +
-      numInp(pfx + '_LV_EF_percent', 'LV EF (%)', '%') +
-      yn(pfx + '_Valve_Calcifications', 'Βαλβιδικές Ασβεστώσεις') +
-      yn(pfx + '_Severe_Valve_Disease', 'Σοβαρή Βαλβιδοπάθεια') +
-    '</div>' +
-    sec('Εργαστηριακές Παράμετροι') +
-    labGrid(pfx, ['Glu','HbA1C','Na','K','Urea','Cr','WBC','Hb','Plt','MPV','Homocysteine','Chol','HDL','TRG','LDL','Lpa','ApoA','ApoB','AST','ALT','gGT','TSH','CRP','Fibrinogen','DDimers','CK']) +
-    sec('Dutch Κριτήρια για FH') +
-    '<div class="grid2" style="margin-bottom:8px;">' +
-      inpDutch(pfx + '_Dutch_Criteria_Score', pfx) +
-      '<div></div>' +
-    '</div>' +
-    dutch(pfx) +
-  '</div></div>';
+  return `<div class="sec-card"><div class="sec-body">
+
+  ${sec('Δημογραφικά')}
+  <div class="grid3">
+    ${inp(pfx+'_Examination_Date','Ημερομηνία','date')}
+    ${inp(pfx+'_Full_Name','Ονοματεπώνυμο *','text','Όνομα Επώνυμο')}
+    ${amka(pfx+'_AMKA','ΑΜΚΑ *')}
+  </div>
+  <div class="grid3">
+    ${inp(pfx+'_Date_of_Birth','Ημερομηνία Γέννησης *','date')}
+    ${sel(pfx+'_Sex','Φύλο *',['ΑΝΔΡΑΣ','ΓΥΝΑΙΚΑ'])}
+    ${numInpBMI(pfx+'_Height_cm','Ύψος (cm)','cm', pfx)}
+  </div>
+  <div class="grid3">
+    ${numInpBMI(pfx+'_Weight_kg','Βάρος (kg)','kg', pfx)}
+    ${bmiDisplay(pfx)}
+    ${yn(pfx+'_Genetic_Confirmation','Γενετική Επιβεβαίωση')}
+  </div>
+
+  ${sec('Ιστορικό (1) — Παράγοντες Κινδύνου')}
+  <div class="grid4">
+    ${yn(pfx+'_Diabetes_Mellitus','Σακχαρώδης Διαβήτης')}
+    ${yn(pfx+'_Hyperlipidaemia','Υπερλιπιδαιμία')}
+    ${yn(pfx+'_Elevated_Lpa','Αυξημένη Lpa')}
+    ${numInp(pfx+'_Lpa_Value_mgdL','Τιμή Lpa (mg/dL)')}
+  </div>
+
+  <div class="grid4">
+    ${yn(pfx+'_Arterial_Hypertension','Υπέρταση')}
+    ${yn(pfx+'_Smoking','Κάπνισμα')}
+    ${yn(pfx+'_Alcoholism','Αλκοολισμός')}
+    ${yn(pfx+'_Physical_Activity','Φυσική Δραστηριότητα')}
+    ${sel(pfx+'_Physical_Activity_Days_per_Week','Μέρες/εβδομάδα',[1,2,3,4,5,6,7])}
+  </div>
+
+  ${sec('Ιστορικό (2) — Καρδιαγγειακά Νοσήματα')}
+  <div class="grid4">
+    ${yn(pfx+'_Cerebrovascular_Accident','ΑΕΕ')}
+    ${yn(pfx+'_CAD','ΣΝ')}
+    ${sel(pfx+'_CAD_Number_of_Vessels','Αριθμός αγγείων',['1','2','3'])}
+  </div>
+  <div class="grid4">
+    ${yn(pfx+'_Myocardial_Infarction','ΟΕΜ')}
+    ${yn(pfx+'_CABG','CABG')}
+    ${yn(pfx+'_PTCA','PTCA')}
+    ${ynConditional(pfx+'_Heart_Failure','Καρδιακή Ανεπάρκεια (ΚΑ)', nyha(pfx))}
+  </div>
+  <div class="grid3">
+    ${ynConditional(pfx+'_Angina_Pectoris','Στηθάγχη',
+      `<div class="yn" style="gap:5px;">
+        <button class="yn-b" data-yn="${pfx}_Angina_Type" data-val="Σταθερή" onclick="setYN('${pfx}_Angina_Type','Σταθερή')">Σταθερή</button>
+        <button class="yn-b" data-yn="${pfx}_Angina_Type" data-val="Ασταθής" onclick="setYN('${pfx}_Angina_Type','Ασταθής')">Ασταθής</button>
+      </div>`
+    )}
+    ${yn(pfx+'_Carotid_Artery_Disease','Νόσος Καρωτίδων')}
+    ${yn(pfx+'_Peripheral_Artery_Disease','Περιφερική Αγγειοπάθεια')}
+  </div>
+
+  ${sec('Ιστορικό (3) — Λοιπά Νοσήματα')}
+  <div class="grid4">
+    ${yn(pfx+'_COPD','ΧΑΠ')}
+    ${yn(pfx+'_Obstructive_Sleep_Apnea','Υπνική Άπνοια')}
+    ${yn(pfx+'_Hyperthyroidism','Υπερθυροειδισμός')}
+    ${yn(pfx+'_Hypothyroidism','Υποθυροειδισμός')}
+  </div>
+  <div class="grid2">
+    ${yn(pfx+'_Liver_Disease','Ηπατοπάθεια')}
+    <div></div>
+  </div>
+
+  ${sec('Οικογενειακό Ιστορικό')}
+  <div class="grid4">
+    ${yn(pfx+'_Family_History_Diabetes','Σακχαρώδης Διαβήτης (οικ.)')}
+    ${yn(pfx+'_Family_History_Hyperlipidaemia','Υπερλιπιδαιμία (οικ.)')}
+    ${yn(pfx+'_Family_History_Elevated_Lpa','Αυξημένη Lpa (οικ.)')}
+    ${yn(pfx+'_Family_History_CVA','ΑΕΕ (οικ.)')}
+  </div>
+  <div class="grid3">
+    ${yn(pfx+'_Family_History_Premature_CAD','Πρώιμη ΣΝ (οικ.)')}
+    ${yn(pfx+'_Family_History_CAD','ΣΝ (οικ.)')}
+    ${cardiacDeathWarn(pfx+'_Cardiovascular_Death','Καρδιαγγειακός Θάνατος (οικ.)')}
+  </div>
+
+  ${sec('Καρδιαγγειακά Φάρμακα')}
+  ${medGrid(pfx,['Β-Αναστολέας','Διουρητικά','Διλτιαζέμη','Αμλοδιπίνη_Μανιδιπίνη','Αναστολείς_ΜΕΑ','Νιτρώδη','ATII_Αναστολέας','PCSK9_Αναστολείς','Στατίνες','Εζετιμίμπη','Κλοπιδογρέλη','Φιβράτες','Ασπιρίνη','Διγοξίνη','Τικαγρελόρη','Απιξαμπάνη','Ριβαροξαμπάνη','Νταμπιγκατράνη','Σιλοσταζόλη','Δικουμαρόλη'])}
+
+  ${sec('Λοιπά Φάρμακα')}
+  ${medGridWithOther(pfx,['Μετφορμίνη','SGLT2_Αναστολείς','GLP1_Αναστολείς','DPP4_Αναστολείς','Ινσουλίνη','Άλλο'])}
+
+  ${sec('Κλίμακα Morisky (Συμμόρφωση Φαρμακευτικής Αγωγής)')}
+  ${moriskiSection(pfx)}
+
+  ${sec('Μεταβολικό Σύνδρομο')}
+  <div class="grid2" style="margin-bottom:8px;">
+    ${yn(pfx+'_Metabolic_Syndrome','Μεταβολικό Σύνδρομο')}
+    <div></div>
+  </div>
+  ${metsGrid(pfx)}
+
+  ${sec('Φυσική Εξέταση')}
+  <div class="grid2">
+    ${yn(pfx+'_Tendon_Xanthomas','Τενόντια Ξανθώματα')}
+    ${yn(pfx+'_Arcus_Cornealis','Arcus Cornealis')}
+  </div>
+
+  ${sec('Ηχωκαρδιογραφικές Παράμετροι')}
+  <div class="grid3">
+    ${numInp(pfx+'_LV_EF_percent','LV EF (%)','%')}
+    ${yn(pfx+'_Valve_Calcifications','Βαλβιδικές Ασβεστώσεις')}
+    ${yn(pfx+'_Severe_Valve_Disease','Σοβαρή Βαλβιδική Στένωση/Ανεπάρκεια')}
+  </div>
+
+  ${sec('Εργαστηριακές Παράμετροι')}
+  ${labGrid(pfx,['Glu','HbA1C','Na','K','Urea','Cr','WBC','Hb','Plt','MPV','Homocysteine','Chol','HDL','TRG','LDL','Lpa','ApoA','ApoB','AST','ALT','gGT','TSH','CRP','Fibrinogen','DDimers','CK'])}
+
+  ${sec('Dutch Κριτήρια για FH')}
+  <div class="grid2" style="margin-bottom:8px;">
+    ${inpDutch(pfx+'_Dutch_Criteria_Score', pfx)}
+    <div></div>
+  </div>
+  ${dutch(pfx)}
+
+  </div></div>`;
 }
 
 // ══════════════════════════════════════════════
 //  CHILD FORM HTML
 // ══════════════════════════════════════════════
 function buildChildForm(pfx) {
-  return '<div class="sec-card"><div class="sec-body">' +
-    '<div style="background:var(--amber-bg);border:1px solid #D4A84B;border-radius:var(--r);padding:8px 12px;font-family:sans-serif;font-size:11px;color:var(--amber);margin-bottom:10px;">' +
-      '⚠️ Φόρμα Παιδιού — Το Οικογενειακό Ιστορικό συμπληρώνεται στους γονείς.' +
-    '</div>' +
-    sec('Δημογραφικά') +
-    '<div class="grid3">' +
-      inp(pfx + '_Examination_Date', 'Ημερομηνία', 'date') +
-      inp(pfx + '_Full_Name', 'Ονοματεπώνυμο *', 'text', 'Όνομα Επώνυμο') +
-      amka(pfx + '_AMKA', 'ΑΜΚΑ *') +
-    '</div>' +
-    '<div class="grid3">' +
-      inp(pfx + '_Date_of_Birth', 'Ημερομηνία Γέννησης *', 'date') +
-      sel(pfx + '_Sex', 'Φύλο *', ['ΑΝΔΡΑΣ','ΓΥΝΑΙΚΑ']) +
-      numInpBMI(pfx + '_Height_cm', 'Ύψος (cm)', 'cm', pfx) +
-    '</div>' +
-    '<div class="grid3">' +
-      numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) +
-      bmiDisplay(pfx) +
-      yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') +
-    '</div>' +
-    sec('Ιστορικό — Παράγοντες Κινδύνου') +
-    '<div class="grid4">' +
-      yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') +
-      yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') +
-      yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') +
-      numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') +
-    '</div>' +
-    '<div class="grid4">' +
-      yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') +
-      yn(pfx + '_Smoking', 'Κάπνισμα') +
-      yn(pfx + '_Alcoholism', 'Αλκοολισμός') +
-      yn(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα') +
-    '</div>' +
-    sec('Καρδιαγγειακά Φάρμακα') +
-    medGrid(pfx, ['Β-Αναστολέας','Διουρητικά','Στατίνες','Εζετιμίμπη','PCSK9 Αναστολείς']) +
-    sec('Μεταβολικό Σύνδρομο') +
-    '<div class="grid2" style="margin-bottom:8px;">' +
-      yn(pfx + '_Metabolic_Syndrome', 'Μεταβολικό Σύνδρομο') +
-      '<div></div>' +
-    '</div>' +
-    metsGrid(pfx) +
-    sec('Φυσική Εξέταση') +
-    '<div class="grid2">' +
-      yn(pfx + '_Tendon_Xanthomas', 'Τενόντια Ξανθώματα') +
-      yn(pfx + '_Arcus_Cornealis', 'Arcus Cornealis') +
-    '</div>' +
-    sec('Εργαστηριακές Παράμετροι') +
-    labGrid(pfx, ['Glu','HbA1C','Na','K','Urea','Cr','WBC','Hb','Plt','Chol','HDL','TRG','LDL','Lpa','ApoA','ApoB','AST','ALT','TSH']) +
-    sec('Dutch Κριτήρια για FH') +
-    '<div class="grid2" style="margin-bottom:8px;">' +
-      inpDutch(pfx + '_Dutch_Criteria_Score', pfx) +
-      '<div></div>' +
-    '</div>' +
-    dutch(pfx) +
-  '</div></div>';
+  return `<div class="sec-card"><div class="sec-body">
+
+  <div id="child-fam-warn" style="display:none;background:var(--red-bg);border:1px solid #F09595;color:var(--red);border-radius:var(--r);padding:10px 14px;font-family:sans-serif;font-size:12px;margin-bottom:10px;">
+    ⚠️ Φόρμα Παιδιού — Λάθος Εισαγωγή Δεδομένων
+  </div>
+
+  ${sec('Δημογραφικά')}
+  <div class="grid3">
+    ${inp(pfx+'_Examination_Date','Ημερομηνία','date')}
+    ${inp(pfx+'_Full_Name','Ονοματεπώνυμο *','text','Επώνυμο Όνομα')}
+    ${amka(pfx+'_AMKA','ΑΜΚΑ *')}
+  </div>
+  <div class="grid3">
+    ${inp(pfx+'_Date_of_Birth','Ημερομηνία Γέννησης *','date')}
+    ${sel(pfx+'_Sex','Φύλο *',['ΑΝΔΡΑΣ','ΓΥΝΑΙΚΑ'])}
+    ${numInpBMI(pfx+'_Height_cm','Ύψος (cm)','cm', pfx)}
+  </div>
+  <div class="grid3">
+    ${numInpBMI(pfx+'_Weight_kg','Βάρος (kg)','kg', pfx)}
+    ${bmiDisplay(pfx)}
+    ${yn(pfx+'_Genetic_Confirmation','Γενετική Επιβεβαίωση')}
+  </div>
+
+  ${sec('Ιστορικό (1) — Παράγοντες Κινδύνου')}
+  <div class="grid4">
+    ${yn(pfx+'_Diabetes_Mellitus','Σακχαρώδης Διαβήτης')}
+    ${yn(pfx+'_Hyperlipidaemia','Υπερλιπιδαιμία')}
+    ${yn(pfx+'_Elevated_Lpa','Αυξημένη Lpa')}
+    ${numInp(pfx+'_Lpa_Value_mgdL','Τιμή Lpa (mg/dL)')}
+  </div>
+  <div class="grid4">
+    ${yn(pfx+'_Arterial_Hypertension','Υπέρταση')}
+    ${yn(pfx+'_Smoking','Κάπνισμα')}
+    ${yn(pfx+'_Alcoholism','Αλκοολισμός')}
+    ${yn(pfx+'_Physical_Activity','Φυσική Δραστηριότητα')}
+    ${sel(pfx+'_Physical_Activity_Days_per_Week','Μέρες/εβδομάδα',[1,2,3,4,5,6,7])}
+  </div>
+  <div class="grid2">
+    ${yn(pfx+'_Arterial_Hypertension','Υπέρταση')}
+    <div></div>
+  </div>
+
+  ${sec('Ιστορικό (2) — Καρδιαγγειακά Νοσήματα')}
+  <div class="grid4">
+    ${yn(pfx+'_Cerebrovascular_Accident','ΑΕΕ')}
+    ${yn(pfx+'_Premature_CAD','Πρώιμη ΣΝ')}
+    ${yn(pfx+'_Coronary_Artery_Disease','Αγγεία ΣΝ')}
+    ${sel(pfx+'_CAD_Number_of_Vessels','Αριθμός αγγείων',['1','2','3'])}
+  </div>
+  <div class="grid4">
+    ${yn(pfx+'_Myocardial_Infarction','ΟΕΜ')}
+    ${yn(pfx+'_CABG','CABG')}
+    ${yn(pfx+'_PTCA','PTCA')}
+    ${ynConditional(pfx+'_Heart_Failure','Καρδιακή Ανεπάρκεια (ΚΑ)', nyha(pfx))}
+  </div>
+  <div class="grid3">
+    ${ynConditional(pfx+'_Angina_Pectoris','Στηθάγχη',
+      `<div class="yn" style="gap:5px;">
+        <button class="yn-b" data-yn="${pfx}_Angina_Type" data-val="Σταθερή" onclick="setYN('${pfx}_Angina_Type','Σταθερή')">Σταθερή</button>
+        <button class="yn-b" data-yn="${pfx}_Angina_Type" data-val="Ασταθής" onclick="setYN('${pfx}_Angina_Type','Ασταθής')">Ασταθής</button>
+      </div>`
+    )}
+    ${yn(pfx+'_Carotid_Artery_Disease','Νόσος Καρωτίδων')}
+    ${yn(pfx+'_Peripheral_Artery_Disease','Περιφερική Αγγειοπάθεια')}
+  </div>
+
+  ${sec('Ιστορικό (3) — Λοιπά Νοσήματα')}
+  <div class="grid4">
+    ${yn(pfx+'_COPD','ΧΑΠ')}
+    ${yn(pfx+'_Obstructive_Sleep_Apnea','Υπνική Άπνοια')}
+    ${yn(pfx+'_Hyperthyroidism','Υπερθυροειδισμός')}
+    ${yn(pfx+'_Hypothyroidism','Υποθυροειδισμός')}
+  </div>
+  <div class="grid2">
+    ${yn(pfx+'_Liver_Disease','Ηπατοπάθεια')}
+    <div></div>
+  </div>
+
+  ${sec('Οικογενειακό Ιστορικό')}
+  <div style="background:var(--amber-bg);border:1px solid #D4A84B;border-radius:var(--r);padding:8px 12px;font-family:sans-serif;font-size:11px;color:var(--amber);margin-bottom:8px;">
+    ⚠️ Στη φόρμα παιδιού το Οικογενειακό Ιστορικό έχει συμπληρωθεί στους γονείς. Εισαγωγή δεδομένων μόνο στο πεδίο Καρδιαγγεακός Θάνατος.
+  </div>
+  <div class="grid4">
+    ${ynChildWarn(pfx+'_Family_History_Diabetes','Σακχαρώδης Διαβήτης (οικ.)')}
+    ${ynChildWarn(pfx+'_Family_History_Hyperlipidaemia','Υπερλιπιδαιμία (οικ.)')}
+    ${ynChildWarn(pfx+'_Family_History_Elevated_Lpa','Αυξημένη Lpa (οικ.)')}
+    ${ynChildWarn(pfx+'_Family_History_CVA','ΑΕΕ (οικ.)')}
+  </div>
+  <div class="grid2">
+    ${ynChildWarn(pfx+'_Family_History_Premature_CAD','Πρώιμη ΣΝ (οικ.)')}
+    ${ynChildWarn(pfx+'_Family_History_CAD','ΣΝ (οικ.)')}
+    ${cardiacDeathWarn(pfx+'_Cardiovascular_Death','Καρδιαγγειακός Θάνατος (οικ.)')}
+  </div>
+
+  ${sec('Καρδιαγγειακά Φάρμακα')}
+  ${medGrid(pfx,['Β-Αναστολέας','Διουρητικά','Διλτιαζέμη','Αμλοδιπίνη_Μανιδιπίνη','Αναστολείς_ΜΕΑ','Νιτρώδη','ATII_Αναστολέας','PCSK9_Αναστολείς','Στατίνες','Εζετιμίμπη','Κλοπιδογρέλη','Φιβράτες','Ασπιρίνη','Διγοξίνη','Τικαγρελόρη','Απιξαμπάνη','Ριβαροξαμπάνη','Νταμπιγκατράνη','Σιλοσταζόλη','Δικουμαρόλη'])}
+
+  ${sec('Λοιπά Φάρμακα')}
+  ${medGridWithOther(pfx,['Μετφορμίνη','SGLT2_Αναστολείς','GLP1_Αναστολείς','DPP4_Αναστολείς','Ινσουλίνη','Άλλο'])}
+
+  ${sec('Κλίμακα Morisky (Συμμόρφωση Φαρμακευτικής Αγωγής)')}
+  ${moriskiSection(pfx)}
+
+  ${sec('Μεταβολικό Σύνδρομο')}
+  <div class="grid2" style="margin-bottom:8px;">
+    ${yn(pfx+'_Metabolic_Syndrome','Μεταβολικό Σύνδρομο')}
+    <div></div>
+  </div>
+  ${metsGrid(pfx)}
+
+  ${sec('Φυσική Εξέταση')}
+  <div class="grid2">
+    ${yn(pfx+'_Tendon_Xanthomas','Τενόντια Ξανθώματα')}
+    ${yn(pfx+'_Arcus_Cornealis','Arcus Cornealis')}
+  </div>
+
+  ${sec('Ηχωκαρδιογραφικές Παράμετροι')}
+  <div class="grid3">
+    ${numInp(pfx+'_LV_EF_percent','LV EF (%)','%')}
+    ${yn(pfx+'_Valve_Calcifications','Βαλβιδικές Ασβεστώσεις')}
+    ${yn(pfx+'_Severe_Valve_Disease','Σοβαρή Βαλβιδική Στένωση/Ανεπάρκεια')}
+  </div>
+
+  ${sec('Εργαστηριακές Παράμετροι')}
+  ${labGrid(pfx,['Glu','HbA1C','Na','K','Urea','Cr','WBC','Hb','Plt','MPV','Homocysteine','Chol','HDL','TRG','LDL','Lpa','ApoA','ApoB','AST','ALT','γGT','TSH','CRP','Fibrinogen','DDimers','CK'])}
+
+  ${sec('Dutch Κριτήρια για FH')}
+  <div class="grid2" style="margin-bottom:8px;">
+    ${inpDutch(pfx+'_Dutch_Criteria_Score', pfx)}
+    <div></div>
+  </div>
+  ${dutch(pfx)}
+
+  </div></div>`;
 }
 
 // ══════════════════════════════════════════════
 //  RESTORE SAVED VALUES INTO FORM
 // ══════════════════════════════════════════════
 function restoreForm(d) {
-  Object.keys(d).forEach(function(k) {
-    var el = document.getElementById(k);
+  Object.keys(d).forEach(k => {
+    const el = $(k);
     if (!el) return;
-    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') el.value = d[k] || '';
+    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') el.value = d[k] ?? '';
     if (el.classList.contains('med-item') && d[k]) el.classList.add('on');
   });
-  
-  Object.keys(d).forEach(function(k) {
+  // YN buttons
+  Object.keys(d).forEach(k => {
     if (d[k] === '1' || d[k] === '0') {
-      document.querySelectorAll('[data-yn="' + k + '"]').forEach(function(b) {
+      document.querySelectorAll(`[data-yn="${k}"]`).forEach(b => {
         b.classList.remove('y','n');
-        if (b.dataset.val == d[k]) b.classList.add(d[k] === '1' ? 'y' : 'n');
+        if (b.dataset.val == d[k]) b.classList.add(d[k]==='1'?'y':'n');
       });
     }
   });
-  
-  document.querySelectorAll('[data-nyha]').forEach(function(b) {
-    var v = d[b.dataset.nyha + '_NYHA_Class'];
-    if (v && parseInt(b.dataset.val) === parseInt(v)) b.classList.add('sel');
+  // Angina type (string YN)
+  Object.keys(d).forEach(k => {
+    if (k.endsWith('_Angina_Type') && d[k]) {
+      document.querySelectorAll(`[data-yn="${k}"]`).forEach(b => {
+        b.classList.remove('y','n');
+        if (b.dataset.val === d[k]) b.classList.add('y');
+      });
+    }
   });
-  
-  document.querySelectorAll('[data-dutch]').forEach(function(b) {
-    var v = d[b.dataset.dutch + '_Dutch_Criteria_Result'];
+  // Restore cardiac death options
+  Object.keys(d).forEach(k => {
+    if (k.endsWith('_Cardiovascular_Death_Who') && d[k]) {
+      const baseId = k.replace('_Cardiovascular_Death_Who','');
+      document.querySelectorAll(`[data-id="${k}"]`).forEach(b => {
+        b.classList.remove('sel');
+        if (b.dataset.val === d[k]) b.classList.add('sel');
+      });
+      showCardiacDeathOptions(baseId);
+    }
+  });
+  // Restore conditional sub-panels
+  ['Heart_Failure','Angina_Pectoris'].forEach(field => {
+    document.querySelectorAll(`[data-yn$="_${field}"]`).forEach(b => {
+      const id = b.dataset.yn;
+      if (d[id] === '1') {
+        const sub = document.getElementById('sub_' + id);
+        if (sub) sub.style.display = 'block';
+      }
+    });
+  });
+  // NYHA
+  document.querySelectorAll('[data-nyha]').forEach(b => {
+    const v = d[b.dataset.nyha + '_NYHA_Class'];
+    if (v && +b.dataset.val === +v) b.classList.add('sel');
+  });
+  // Dutch
+  document.querySelectorAll('[data-dutch]').forEach(b => {
+    const v = d[b.dataset.dutch + '_Dutch_Criteria_Result'];
     if (v && b.dataset.val === v) b.classList.add('sel');
   });
-  
-  document.querySelectorAll('[id$="_BMI_display"]').forEach(function(el) {
-    var pfx = el.id.replace('_BMI_display', '');
+  // Recalc BMI for all visible pfx
+  document.querySelectorAll('[id$="_BMI_display"]').forEach(el => {
+    const pfx = el.id.replace('_BMI_display','');
     calcBMI(pfx);
+  });
+  // Restore Morisky result displays
+  document.querySelectorAll('[id$="_Morisky_Result"]').forEach(el => {
+    const pfx = el.id.replace('_Morisky_Result','');
+    calcMorisky(pfx);
+  });
+  // Restore "Άλλο" medication field visibility and value
+  Object.keys(d).forEach(k => {
+    if (k.endsWith('_Other_Medication') && d[k]) {
+      const container = document.getElementById(k + '_container');
+      if (container) {
+        container.style.display = 'block';
+        const textField = document.getElementById(k);
+        if (textField) {
+          textField.value = d[k] || '';
+        }
+      }
+    }
   });
 }
 
 // ══════════════════════════════════════════════
 //  XLSX EXPORT
+//  Output format: one row per family
+//  Columns: family_code, Parent1_name, Parent1_Chol, Parent2_Chol, Child1_Chol ...
 // ══════════════════════════════════════════════
 async function exportAllXLSX() {
-  var result = await sb.from('families').select('*, members(*)').order('family_code', { ascending: true });
-  if (result.error || !result.data || !result.data.length) { alert('Δεν βρέθηκαν δεδομένα.'); return; }
-  triggerXLSXDownload(result.data, 'fh_edc_all_' + today() + '.xlsx');
+  const { data: families, error } = await sb
+    .from('families')
+    .select('*, members(*)')
+    .order('family_code', { ascending: true });
+  if (error || !families?.length) { alert('Δεν βρέθηκαν δεδομένα.'); return; }
+  triggerXLSXDownload(families, `fh_edc_all_${today()}.xlsx`);
 }
 
 async function exportFamilyXLSX(famId) {
-  var result = await sb.from('families').select('*, members(*)').eq('id', famId).single();
-  if (!result.data) return;
-  triggerXLSXDownload([result.data], result.data.family_code + '_' + today() + '.xlsx');
+  const { data: fam } = await sb
+    .from('families')
+    .select('*, members(*)')
+    .eq('id', famId)
+    .single();
+  if (!fam) return;
+  triggerXLSXDownload([fam], `${fam.family_code}_${today()}.xlsx`);
 }
 
 function triggerXLSXDownload(families, filename) {
-  var rows = [];
-  families.forEach(function(fam) {
-    var members = fam.members || [];
-    members.forEach(function(m) {
-      var row = { family_code: fam.family_code, role: m.role };
-      Object.keys(m.data || {}).forEach(function(k) {
-        var cleanKey = k.replace(/^[^_]+_[^_]+_/, '');
-        row[cleanKey] = m.data[k];
-      });
-      rows.push(row);
+  // Fixed column order matching the form interface — full descriptive names
+  const FIELD_ORDER = [
+    'Examination_Date','Full_Name','AMKA','Date_of_Birth','Sex','Height_cm','Weight_kg','BMI','Genetic_Confirmation',
+    'Diabetes_Mellitus','Hyperlipidaemia','Elevated_Lpa','Lpa_Value_mgdL',
+    'Smoking','Alcoholism','Physical_Activity','Physical_Activity_Days_per_Week','Arterial_Hypertension',
+    'Cerebrovascular_Accident','Premature_CAD','Coronary_Artery_Disease','CAD_Number_of_Vessels',
+    'Myocardial_Infarction','CABG','PTCA','Heart_Failure','NYHA_Class',
+    'Angina_Pectoris','Angina_Type','Carotid_Artery_Disease','Peripheral_Artery_Disease',
+    'COPD','Obstructive_Sleep_Apnea','Hyperthyroidism','Hypothyroidism','Liver_Disease',
+    'Family_History_Diabetes','Family_History_Hyperlipidaemia','Family_History_Elevated_Lpa',
+    'Family_History_CVA','Family_History_Premature_CAD','Family_History_CAD',
+    'Β_Αναστολέας','Διουρητικά','Διλτιαζέμη','Αμλοδιπίνη_Μανιδιπίνη','Αναστολείς_ΜΕΑ',
+    'Νιτρώδη','ATII_Αναστολέας','PCSK9_Αναστολείς','Στατίνες','Εζετιμίμπη',
+    'Κλοπιδογρέλη','Φιβράτες','Ασπιρίνη','Διγοξίνη','Τικαγρελόρη',
+    'Απιξαμπάνη','Ριβαροξαμπάνη','Νταμπιγκατράνη','Σιλοσταζόλη','Δικουμαρόλη',
+    'Μετφορμίνη','SGLT2_Αναστολείς','GLP1_Αναστολείς','DPP4_Αναστολείς','Ινσουλίνη',
+    'Morisky_Q1','Morisky_Q2','Morisky_Q3','Morisky_Q4','Morisky_Score',
+    'Metabolic_Syndrome','MetS_TRG_150','MetS_HDL_low','MetS_Glu_100','MetS_BP_130_85','MetS_Waist',
+    'Tendon_Xanthomas','Arcus_Cornealis',
+    'LV_EF_percent','Valve_Calcifications','Severe_Valve_Disease',
+    'Glu','HbA1C','Na','K','Urea','Cr','WBC','Hb','Plt','MPV','Homocysteine',
+    'Chol','HDL','TRG','LDL','Lpa','ApoA','ApoB','AST','ALT','gGT',
+    'TSH','CRP','Fibrinogen','DDimers','CK',
+    'Dutch_Criteria_Score','Dutch_Criteria_Result',
+  ];
+
+  // Human-readable column header map
+  const COL_LABELS = {
+    'family_code':'Κωδικός Οικογένειας','created_at':'Ημερομηνία Εγγραφής',
+    'Examination_Date':'Ημερομηνία Εξέτασης','Full_Name':'Ονοματεπώνυμο','AMKA':'ΑΜΚΑ',
+    'Date_of_Birth':'Ημερομηνία Γέννησης','Sex':'Φύλο','Height_cm':'Ύψος (cm)',
+    'Weight_kg':'Βάρος (kg)','BMI':'ΔΜΣ — BMI (kg/m²)',
+    'Genetic_Confirmation':'Γενετική Επιβεβαίωση',
+    'Diabetes_Mellitus':'Σακχαρώδης Διαβήτης','Hyperlipidaemia':'Υπερλιπιδαιμία',
+    'Elevated_Lpa':'Αυξημένη Lpa','Lpa_Value_mgdL':'Τιμή Lpa (mg/dL)',
+    'Smoking':'Κάπνισμα','Alcoholism':'Αλκοολισμός',
+    'Physical_Activity':'Φυσική Δραστηριότητα',
+    'Physical_Activity_Days_per_Week':'Φυσική Δραστηριότητα — Μέρες/Εβδομάδα',
+    'Arterial_Hypertension':'Υπέρταση',
+    'Cerebrovascular_Accident':'ΑΕΕ — Αγγειακό Εγκεφαλικό Επεισόδιο',
+    'Premature_CAD':'Πρώιμη Στεφανιαία Νόσος',
+    'Coronary_Artery_Disease':'Στεφανιαία Νόσος',
+    'CAD_Number_of_Vessels':'Αγγεία Στεφανιαίας Νόσου',
+    'Myocardial_Infarction':'ΟΕΜ — Οξύ Έμφραγμα Μυοκαρδίου',
+    'CABG':'CABG — Αορτοστεφανιαία Παράκαμψη','PTCA':'PTCA — Αγγειοπλαστική',
+    'Heart_Failure':'Καρδιακή Ανεπάρκεια','NYHA_Class':'Στάδιο NYHA',
+    'Angina_Pectoris':'Στηθάγχη','Angina_Type':'Τύπος Στηθάγχης (Σταθερή/Ασταθής)',
+    'Carotid_Artery_Disease':'Νόσος Καρωτίδων',
+    'Peripheral_Artery_Disease':'Περιφερική Αγγειοπάθεια',
+    'COPD':'ΧΑΠ — Χρόνια Αποφρακτική Πνευμονοπάθεια',
+    'Obstructive_Sleep_Apnea':'Υπνική Άπνοια',
+    'Hyperthyroidism':'Υπερθυροειδισμός','Hypothyroidism':'Υποθυροειδισμός',
+    'Liver_Disease':'Ηπατοπάθεια',
+    'Family_History_Diabetes':'Οικ. Ιστ. Σακχαρώδης Διαβήτης',
+    'Family_History_Hyperlipidaemia':'Οικ. Ιστ. Υπερλιπιδαιμία',
+    'Family_History_Elevated_Lpa':'Οικ. Ιστ. Αυξημένη Lpa',
+    'Family_History_CVA':'Οικ. Ιστ. ΑΕΕ',
+    'Family_History_Premature_CAD':'Οικ. Ιστ. Πρώιμη ΣΝ',
+    'Family_History_CAD':'Οικ. Ιστ. Κανονική ΣΝ',
+    'Morisky_Q1':'Morisky Ερ.1 — Ξεχνάτε φάρμακα;',
+    'Morisky_Q2':'Morisky Ερ.2 — Δεν παίρνετε μερικές φορές;',
+    'Morisky_Q3':'Morisky Ερ.3 — Σταματάτε όταν νιώθετε καλά;',
+    'Morisky_Q4':'Morisky Ερ.4 — Σταματάτε όταν νιώθετε χειρότερα;',
+    'Morisky_Score':'Morisky Σκορ Συμμόρφωσης (0–4)',
+    'Metabolic_Syndrome':'Μεταβολικό Σύνδρομο',
+    'MetS_TRG_150':'ΜΣ: TRG > 150 ή υπολιπιδαιμικά',
+    'MetS_HDL_low':'ΜΣ: HDL < 40(♂) / < 50(♀) ή υπολιπιδαιμικά',
+    'MetS_Glu_100':'ΜΣ: ΣΔ ή Glu > 100',
+    'MetS_BP_130_85':'ΜΣ: Υπέρταση ή ΑΠ > 130/85',
+    'MetS_Waist':'ΜΣ: Περίμετρος μέσης > 102(♂) / > 88(♀) cm',
+    'Tendon_Xanthomas':'Τενόντια Ξανθώματα','Arcus_Cornealis':'Arcus Cornealis',
+    'LV_EF_percent':'LV EF (%)','Valve_Calcifications':'Βαλβιδικές Ασβεστώσεις',
+    'Severe_Valve_Disease':'Σοβαρή Βαλβιδική Στένωση/Ανεπάρκεια',
+    'Glu':'Γλυκόζη (mg/dL)','HbA1C':'HbA1c (%)','Na':'Νάτριο Na','K':'Κάλιο K',
+    'Urea':'Ουρία','Cr':'Κρεατινίνη','WBC':'Λευκά ΑΣ WBC','Hb':'Αιμοσφαιρίνη Hb',
+    'Plt':'Αιμοπετάλια Plt','MPV':'Μέσος Όγκος MPV','Homocysteine':'Ομοκυστεΐνη',
+    'Chol':'Ολική Χοληστερόλη','HDL':'HDL Χοληστερόλη','TRG':'Τριγλυκερίδια',
+    'LDL':'LDL Χοληστερόλη','Lpa':'Λιποπρωτεΐνη(α) Lpa','ApoA':'Απολιποπρ. Α',
+    'ApoB':'Απολιποπρ. Β','AST':'AST','ALT':'ALT','gGT':'γGT','TSH':'TSH',
+    'CRP':'CRP','Fibrinogen':'Φιμπρινογόνο','DDimers':'D-Dimers','CK':'CK',
+    'Dutch_Criteria_Score':'Dutch FH Σκορ (0–31)',
+    'Dutch_Criteria_Result':'Dutch FH Κατηγορία',
+  };
+  function colLabel(role, field) {
+    const base = COL_LABELS[field] || field;
+    const roleGreek = role === 'Parent1' ? 'Γονέας 1' : role === 'Parent2' ? 'Γονέας 2' : 'Παιδί ' + role.replace('Child','');
+    return roleGreek + ' — ' + base;
+  }
+
+  // Collect all roles present
+  const roles = [];
+  families.forEach(fam => {
+    (fam.members || []).forEach(m => {
+      if (!roles.includes(m.role)) roles.push(m.role);
     });
   });
-  
-  var ws = XLSX.utils.json_to_sheet(rows);
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  roles.sort();
+
+  // Build ordered columns: key array for data lookup, label array for header row
+  const cols = ['family_code', 'created_at'];
+  const colHeaders = [COL_LABELS['family_code'] || 'Κωδικός Οικογένειας', COL_LABELS['created_at'] || 'Ημερομηνία'];
+  roles.forEach(role => {
+    FIELD_ORDER.forEach(field => {
+      cols.push(`${role}_${field}`);
+      colHeaders.push(colLabel(role, field));
+    });
+  });
+
+  // Build rows
+  const rows = families.map(fam => {
+    const flat = {
+      family_code: fam.family_code,
+      created_at:  new Date(fam.created_at).toLocaleDateString('el-GR'),
+    };
+    (fam.members || []).forEach(m => {
+      Object.keys(m.data || {}).forEach(field => {
+        // Keys are stored as "FAMxxx_RoleXX_FieldName" — strip both prefix segments
+        const cleanField = field.replace(/^[^_]+_[^_]+_/, '');
+        flat[`${m.role}_${field}`] = m.data[field];
+        flat[`${m.role}_${cleanField}`] = m.data[field];
+      });
+    });
+    return cols.map(c => flat[c] ?? '');
+  });
+
+  // Build worksheet with descriptive headers
+  const wsData = [colHeaders, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Auto column widths
+  ws['!cols'] = cols.map(c => ({ wch: Math.min(Math.max(c.length + 2, 10), 30) }));
+
+  // Style header row bold (SheetJS CE supports basic cell props)
+  cols.forEach((_, ci) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (!ws[cellRef]) return;
+    ws[cellRef].s = { font: { bold: true }, fill: { fgColor: { rgb: 'EBF1FB' } } };
+  });
+
+  // Create workbook with two sheets: All Data + per-family sheets
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Όλα τα δεδομένα');
+
+  // One sheet per family
+  families.forEach(fam => {
+    const members = fam.members || [];
+    if (!members.length) return;
+
+    const famRows = [];
+    members.sort((a,b) => a.role.localeCompare(b.role)).forEach(m => {
+      const data = m.data || {};
+      const roleGreek = m.role === 'Parent1' ? 'Γονέας 1' : m.role === 'Parent2' ? 'Γονέας 2' : 'Παιδί ' + m.role.replace('Child','');
+      Object.keys(data).forEach(field => {
+        // Strip "FAMxxx_RoleXX_" prefix to get clean field name
+        const cleanKey = field.replace(/^[^_]+_[^_]+_/, '');
+        const label = COL_LABELS[cleanKey] || cleanKey;
+        famRows.push([`${fam.family_code} — ${roleGreek}`, label, data[field] ?? '']);
+      });
+    });
+
+    const famWs = XLSX.utils.aoa_to_sheet([['Κωδικός — Μέλος', 'Πεδίο (Αναλυτικά)', 'Τιμή'], ...famRows]);
+    famWs['!cols'] = [{ wch: 28 }, { wch: 52 }, { wch: 18 }];
+    const sheetName = fam.family_code.slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, famWs, sheetName);
+  });
+
   XLSX.writeFile(wb, filename);
 }
 
+
 async function exportAllCSV() {
-  var result = await sb.from('families').select('*, members(*)').order('family_code', { ascending: true });
-  if (result.error || !result.data || !result.data.length) { alert('Δεν βρέθηκαν δεδομένα.'); return; }
-  triggerCSVDownload(result.data, 'fh_edc_all_' + today() + '.csv');
+  const { data: families, error } = await sb
+    .from('families')
+    .select('*, members(*)')
+    .order('family_code', { ascending: true });
+  if (error || !families?.length) { alert('Δεν βρέθηκαν δεδομένα.'); return; }
+  triggerCSVDownload(families, `fh_edc_all_${today()}.csv`);
 }
 
 async function exportFamilyCSV(famId) {
-  var result = await sb.from('families').select('*, members(*)').eq('id', famId).single();
-  if (!result.data) return;
-  triggerCSVDownload([result.data], result.data.family_code + '_' + today() + '.csv');
+  const { data: fam } = await sb
+    .from('families')
+    .select('*, members(*)')
+    .eq('id', famId)
+    .single();
+  if (!fam) return;
+  triggerCSVDownload([fam], `${fam.family_code}_${today()}.csv`);
 }
 
 function triggerCSVDownload(families, filename) {
-  var rows = [];
-  var headers = ['family_code', 'role'];
-  
-  families.forEach(function(fam) {
-    (fam.members || []).forEach(function(m) {
-      var row = { family_code: fam.family_code, role: m.role };
-      Object.keys(m.data || {}).forEach(function(k) {
-        var cleanKey = k.replace(/^[^_]+_[^_]+_/, '');
-        row[cleanKey] = m.data[k];
-        if (headers.indexOf(cleanKey) === -1) headers.push(cleanKey);
-      });
-      rows.push(row);
+  // Reuse same FIELD_ORDER and COL_LABELS as XLSX — defined inline here for CSV standalone use
+  const FIELD_ORDER = [
+    'Examination_Date','Full_Name','AMKA','Date_of_Birth','Sex','Height_cm','Weight_kg','BMI','Genetic_Confirmation',
+    'Diabetes_Mellitus','Hyperlipidaemia','Elevated_Lpa','Lpa_Value_mgdL',
+    'Smoking','Alcoholism','Physical_Activity','Physical_Activity_Days_per_Week','Arterial_Hypertension',
+    'Cerebrovascular_Accident','Premature_CAD','Coronary_Artery_Disease','CAD_Number_of_Vessels',
+    'Myocardial_Infarction','CABG','PTCA','Heart_Failure','NYHA_Class',
+    'Angina_Pectoris','Angina_Type','Carotid_Artery_Disease','Peripheral_Artery_Disease',
+    'COPD','Obstructive_Sleep_Apnea','Hyperthyroidism','Hypothyroidism','Liver_Disease',
+    'Family_History_Diabetes','Family_History_Hyperlipidaemia','Family_History_Elevated_Lpa',
+    'Family_History_CVA','Family_History_Premature_CAD','Family_History_CAD',
+    'Β_Αναστολέας','Διουρητικά','Διλτιαζέμη','Αμλοδιπίνη_Μανιδιπίνη','Αναστολείς_ΜΕΑ',
+    'Νιτρώδη','ATII_Αναστολέας','PCSK9_Αναστολείς','Στατίνες','Εζετιμίμπη',
+    'Κλοπιδογρέλη','Φιβράτες','Ασπιρίνη','Διγοξίνη','Τικαγρελόρη',
+    'Απιξαμπάνη','Ριβαροξαμπάνη','Νταμπιγκατράνη','Σιλοσταζόλη','Δικουμαρόλη',
+    'Μετφορμίνη','SGLT2_Αναστολείς','GLP1_Αναστολείς','DPP4_Αναστολείς','Ινσουλίνη',
+    'Morisky_Q1','Morisky_Q2','Morisky_Q3','Morisky_Q4','Morisky_Score',
+    'Metabolic_Syndrome','MetS_TRG_150','MetS_HDL_low','MetS_Glu_100','MetS_BP_130_85','MetS_Waist',
+    'Tendon_Xanthomas','Arcus_Cornealis',
+    'LV_EF_percent','Valve_Calcifications','Severe_Valve_Disease',
+    'Glu','HbA1C','Na','K','Urea','Cr','WBC','Hb','Plt','MPV','Homocysteine',
+    'Chol','HDL','TRG','LDL','Lpa','ApoA','ApoB','AST','ALT','gGT',
+    'TSH','CRP','Fibrinogen','DDimers','CK',
+    'Dutch_Criteria_Score','Dutch_Criteria_Result',
+  ];
+  const COL_LABELS_CSV = {
+    'family_code':'Κωδικός Οικογένειας','created_at':'Ημερομηνία Εγγραφής',
+    'Examination_Date':'Ημερομηνία Εξέτασης','Full_Name':'Ονοματεπώνυμο','AMKA':'ΑΜΚΑ',
+    'Date_of_Birth':'Ημερομηνία Γέννησης','Sex':'Φύλο','Height_cm':'Ύψος (cm)',
+    'Weight_kg':'Βάρος (kg)','BMI':'ΔΜΣ — BMI (kg/m²)',
+    'Genetic_Confirmation':'Γενετική Επιβεβαίωση',
+    'Diabetes_Mellitus':'Σακχαρώδης Διαβήτης','Hyperlipidaemia':'Υπερλιπιδαιμία',
+    'Elevated_Lpa':'Αυξημένη Lpa','Lpa_Value_mgdL':'Τιμή Lpa (mg/dL)',
+    'Smoking':'Κάπνισμα','Alcoholism':'Αλκοολισμός',
+    'Physical_Activity':'Φυσική Δραστηριότητα',
+    'Physical_Activity_Days_per_Week':'Φυσική Δραστηριότητα — Μέρες/Εβδομάδα',
+    'Arterial_Hypertension':'Υπέρταση',
+    'Cerebrovascular_Accident':'ΑΕΕ — Αγγειακό Εγκεφαλικό Επεισόδιο',
+    'Premature_CAD':'Πρώιμη Στεφανιαία Νόσος',
+    'Coronary_Artery_Disease':'Στεφανιαία Νόσος',
+    'CAD_Number_of_Vessels':'Αγγεία Στεφανιαίας Νόσου',
+    'Myocardial_Infarction':'ΟΕΜ — Οξύ Έμφραγμα Μυοκαρδίου',
+    'CABG':'CABG — Αορτοστεφανιαία Παράκαμψη','PTCA':'PTCA — Αγγειοπλαστική',
+    'Heart_Failure':'Καρδιακή Ανεπάρκεια','NYHA_Class':'Στάδιο NYHA',
+    'Angina_Pectoris':'Στηθάγχη','Angina_Type':'Τύπος Στηθάγχης (Σταθερή/Ασταθής)',
+    'Carotid_Artery_Disease':'Νόσος Καρωτίδων',
+    'Peripheral_Artery_Disease':'Περιφερική Αγγειοπάθεια',
+    'COPD':'ΧΑΠ — Χρόνια Αποφρακτική Πνευμονοπάθεια',
+    'Obstructive_Sleep_Apnea':'Υπνική Άπνοια',
+    'Hyperthyroidism':'Υπερθυροειδισμός','Hypothyroidism':'Υποθυροειδισμός',
+    'Liver_Disease':'Ηπατοπάθεια',
+    'Family_History_Diabetes':'Οικ. Ιστ. Σακχαρώδης Διαβήτης',
+    'Family_History_Hyperlipidaemia':'Οικ. Ιστ. Υπερλιπιδαιμία',
+    'Family_History_Elevated_Lpa':'Οικ. Ιστ. Αυξημένη Lpa',
+    'Family_History_CVA':'Οικ. Ιστ. ΑΕΕ',
+    'Family_History_Premature_CAD':'Οικ. Ιστ. Πρώιμη ΣΝ',
+    'Family_History_CAD':'Οικ. Ιστ. Κανονική ΣΝ',
+    'Morisky_Q1':'Morisky Ερ.1 — Ξεχνάτε φάρμακα;',
+    'Morisky_Q2':'Morisky Ερ.2 — Δεν παίρνετε μερικές φορές;',
+    'Morisky_Q3':'Morisky Ερ.3 — Σταματάτε όταν νιώθετε καλά;',
+    'Morisky_Q4':'Morisky Ερ.4 — Σταματάτε όταν νιώθετε χειρότερα;',
+    'Morisky_Score':'Morisky Σκορ Συμμόρφωσης (0–4)',
+    'Metabolic_Syndrome':'Μεταβολικό Σύνδρομο',
+    'MetS_TRG_150':'ΜΣ: TRG > 150 ή υπολιπιδαιμικά',
+    'MetS_HDL_low':'ΜΣ: HDL < 40(ανδρ) / < 50(γυν) ή υπολιπιδαιμικά',
+    'MetS_Glu_100':'ΜΣ: ΣΔ ή Glu > 100',
+    'MetS_BP_130_85':'ΜΣ: Υπέρταση ή ΑΠ > 130/85',
+    'MetS_Waist':'ΜΣ: Περίμετρος μέσης > 102(ανδρ) / > 88(γυν) cm',
+    'Tendon_Xanthomas':'Τενόντια Ξανθώματα','Arcus_Cornealis':'Arcus Cornealis',
+    'LV_EF_percent':'LV EF (%)','Valve_Calcifications':'Βαλβιδικές Ασβεστώσεις',
+    'Severe_Valve_Disease':'Σοβαρή Βαλβιδική Στένωση/Ανεπάρκεια',
+    'Glu':'Γλυκόζη (mg/dL)','HbA1C':'HbA1c (%)','Na':'Νάτριο','K':'Κάλιο',
+    'Urea':'Ουρία','Cr':'Κρεατινίνη','WBC':'Λευκά ΑΣ','Hb':'Αιμοσφαιρίνη',
+    'Plt':'Αιμοπετάλια','MPV':'MPV','Homocysteine':'Ομοκυστεΐνη',
+    'Chol':'Ολική Χοληστερόλη','HDL':'HDL','TRG':'Τριγλυκερίδια',
+    'LDL':'LDL','Lpa':'Lpa','ApoA':'ApoA','ApoB':'ApoB',
+    'AST':'AST','ALT':'ALT','gGT':'γGT','TSH':'TSH',
+    'CRP':'CRP','Fibrinogen':'Φιμπρινογόνο','DDimers':'D-Dimers','CK':'CK',
+    'Dutch_Criteria_Score':'Dutch FH Σκορ (0–31)',
+    'Dutch_Criteria_Result':'Dutch FH Κατηγορία',
+  };
+  function csvColLabel(role, field) {
+    const base = COL_LABELS_CSV[field] || field;
+    const rg = role === 'Parent1' ? 'Γονέας1' : role === 'Parent2' ? 'Γονέας2' : 'Παιδί' + role.replace('Child','');
+    return rg + ' — ' + base;
+  }
+
+  const roles = [];
+  families.forEach(fam => {
+    (fam.members || []).forEach(m => { if (!roles.includes(m.role)) roles.push(m.role); });
+  });
+  roles.sort();
+
+  // cols = internal keys for data lookup; colHeaders = human-readable CSV header row
+  const cols = ['family_code', 'created_at'];
+  const colHeaders = ['Κωδικός Οικογένειας', 'Ημερομηνία Εγγραφής'];
+  roles.forEach(role => {
+    FIELD_ORDER.forEach(field => {
+      cols.push(`${role}_${field}`);
+      colHeaders.push(csvColLabel(role, field));
     });
   });
-  
-  var csvContent = headers.join(',') + '\n';
-  rows.forEach(function(row) {
-    var line = headers.map(function(h) {
-      var val = row[h] || '';
-      return '"' + String(val).replace(/"/g, '""') + '"';
-    }).join(',');
-    csvContent += line + '\n';
+
+  const rows = families.map(fam => {
+    const flat = {
+      family_code: fam.family_code,
+      created_at: new Date(fam.created_at).toLocaleDateString('el-GR'),
+    };
+    (fam.members || []).forEach(m => {
+      Object.keys(m.data || {}).forEach(field => {
+        const cleanField = field.replace(/^[^_]+_[^_]+_/, '');
+        flat[`${m.role}_${field}`] = m.data[field];
+        flat[`${m.role}_${cleanField}`] = m.data[field];
+      });
+    });
+    return cols.map(c => flat[c] ?? '');
   });
-  
-  var blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  var a = document.createElement('a');
+
+  // Use descriptive headers as first row
+  const csv = [colHeaders, ...rows]
+    .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
