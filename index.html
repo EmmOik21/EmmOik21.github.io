@@ -7,7 +7,6 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>  
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
@@ -206,8 +205,10 @@ input:focus,select:focus{border-color:var(--blue-mid);background:#fff;}
 // ── REPLACE THESE TWO VALUES with your Supabase credentials ──
 
 const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
-
+const sb = createClient(
+  'https://xhsyiqsddnqgtjrpoerk.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhoc3lpcXNkZG5xZ3RqcnBvZXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMTgzMDgsImV4cCI6MjA4OTY5NDMwOH0.9WhEtvIBmBH9vlLrOZ5LpRTQFHsF4iyWsUgBwN4PLuw'
+);
 // ══════════════════════════════════════════════
 //  AUTH
 // ══════════════════════════════════════════════
