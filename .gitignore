@@ -1,0 +1,14 @@
+# Credentials - NEVER commit these to GitHub
+config.js
+.env
+.env.local
+secrets.js
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
