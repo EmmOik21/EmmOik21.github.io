@@ -474,7 +474,7 @@ function medGridWithOther(pfx, list) {
     }
   });
   html += '</div>';
-  html += '<div id="' + pfx + '_Other_Input_Container" style="display:none;margin-top:8px;"><input type="text" id="' + pfx + '_Other_Medication_Text" placeholder="Περιγράψτε το φάρμακο..." oninput="formState[\'' + pfx + '_Other_Medication_Text\']=this.value;triggerAutoSave()" style="width:100%;"></div>';
+  html += '<div id="' + pfx + '_Other_Input_Container" style="display:none;margin-top:8px;"><input type="text" id="' + pfx + '_Other_Medication_Text" placeholder="Όνομα δραστικής ουσίας 1, δραστικής ουσίας 2..." oninput="formState[\'' + pfx + '_Other_Medication_Text\']=this.value;triggerAutoSave()" style="width:100%;"></div>';
   return html;
 }
 
