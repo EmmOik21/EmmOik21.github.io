@@ -27,10 +27,8 @@ jobs:
 
       - name: Create config.js from secrets
         run: |
-          cat > config.js << 'EOF'
-          const SUPABASE_URL = '${{ secrets.SUPABASE_URL }}';
-          const SUPABASE_KEY = '${{ secrets.SUPABASE_KEY }}';
-          EOF
+          echo "const SUPABASE_URL = '${{ secrets.SUPABASE_URL }}';" > config.js
+          echo "const SUPABASE_KEY = '${{ secrets.SUPABASE_KEY }}';" >> config.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
