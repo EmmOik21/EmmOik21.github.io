@@ -214,9 +214,13 @@ sb.auth.onAuthStateChange((event, session) => {
   }
 });
 
+// Track if form has unsaved changes (dirty state)
+let formIsDirty = false;
+let lastSavedToDb = false;
+
 const formPersistence = {
   save() { 
-    if (curFamCode && curRole) {
+    if (curFamCode && curRole && formIsDirty) {
       localStorage.setItem('fh_formState', JSON.stringify({ formState, curFamId, curFamCode, curRole, curMemId, timestamp: Date.now() }));
     }
   },
@@ -231,14 +235,19 @@ const formPersistence = {
     localStorage.removeItem('fh_formState');
     return null;
   },
-  clear() { localStorage.removeItem('fh_formState'); },
-  hasUnsaved() { return localStorage.getItem('fh_formState') !== null; }
+  clear() { 
+    localStorage.removeItem('fh_formState'); 
+    formIsDirty = false;
+  },
+  hasUnsaved() { return formIsDirty && localStorage.getItem('fh_formState') !== null; }
 };
 
 // Save immediately on every change (debounced to 500ms to avoid excessive writes)
 let autoSaveTimer = null;
 let indicatorTimer = null;
 function triggerAutoSave() {
+  formIsDirty = true; // Mark form as dirty when user makes changes
+  lastSavedToDb = false; // Reset database save flag
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(() => {
     formPersistence.save();
@@ -252,33 +261,33 @@ function triggerAutoSave() {
   }, 500);
 }
 
-// Save when user leaves the page or switches tabs
-window.addEventListener('beforeunload', function(e) {
-  if (document.querySelector('.view.active')?.id === 'view-form' && Object.keys(formState).length > 0) {
-    formPersistence.save();
-    // Show warning if there's unsaved data
-    e.preventDefault();
-    e.returnValue = 'Έχετε μη αποθηκευμένες αλλαγές. Είστε σίγουροι ότι θέλετε να φύγετε;';
-    return e.returnValue;
-  }
-});
-
 // Save when tab becomes hidden (user switches to another tab)
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'hidden' && document.querySelector('.view.active')?.id === 'view-form') {
+  if (document.visibilityState === 'hidden' && document.querySelector('.view.active')?.id === 'view-form' && formIsDirty && !lastSavedToDb) {
     formPersistence.save();
+  }
+  // When user returns to the tab, show reminder if there's unsaved data
+  if (document.visibilityState === 'visible' && formIsDirty && !lastSavedToDb && document.querySelector('.view.active')?.id === 'view-form') {
+    const msg = document.getElementById('save-msg');
+    if (msg) {
+      msg.style.display = 'block';
+      msg.className = 'save-msg warn';
+      msg.textContent = '⚠️ Έχετε μη αποθηκευμένες αλλαγές. Πατήστε "Αποθήκευση στη Βάση" για να τις αποθηκεύσετε.';
+    }
   }
 });
 
-// Save on page unload
+// Save on page unload (only if dirty and not saved to DB)
 window.addEventListener('pagehide', function() {
-  if (document.querySelector('.view.active')?.id === 'view-form') {
+  if (document.querySelector('.view.active')?.id === 'view-form' && formIsDirty && !lastSavedToDb) {
     formPersistence.save();
   }
 });
 
 function showView(name) {
-  if (document.querySelector('.view.active')?.id === 'view-form') formPersistence.save();
+  if (document.querySelector('.view.active')?.id === 'view-form' && formIsDirty && !lastSavedToDb) {
+    formPersistence.save();
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
 }
@@ -382,6 +391,8 @@ async function openMemberFormForEdit(memberId) {
   const fam = allFamilies.find(f => f.id === m.family_id);
   curFamId = m.family_id; curFamCode = fam?.family_code || ''; curRole = m.role; curMemId = memberId;
   formState = { ...(m.data || {}) };
+  formIsDirty = false; // Data loaded from DB, not dirty yet
+  lastSavedToDb = true; // Existing data is already in DB
   const code = curFamCode + '_' + m.role;
   document.getElementById('form-code-lbl').textContent = code;
   document.getElementById('form-role-lbl').textContent = roleLabel(m.role);
@@ -397,8 +408,12 @@ async function openMemberForm(famId, famCode, role, memberId) {
   const saved = formPersistence.load();
   if (saved && saved.curFamCode === famCode && saved.curRole === role) {
     curFamId = saved.curFamId; curFamCode = saved.curFamCode; curRole = saved.curRole; curMemId = saved.curMemId; formState = saved.formState || {};
+    formIsDirty = true; // Restored from local storage, still needs to be saved to DB
+    lastSavedToDb = false;
   } else {
     curFamId = famId; curFamCode = famCode; curRole = role; curMemId = null; formState = {};
+    formIsDirty = false; // New empty form, not dirty
+    lastSavedToDb = false;
   }
   const code = famCode + '_' + role;
   document.getElementById('form-code-lbl').textContent = code;
@@ -448,10 +463,17 @@ async function saveMember() {
     ({ error } = await sb.from('members').insert({ family_id: curFamId, role: curRole, data: formState }));
   }
 
-  btn.disabled = false; btn.textContent = 'Αποθήκευση';
+  btn.disabled = false; btn.textContent = 'Αποθήκευση στη Βάση';
   msg.style.display = 'block';
   if (error) { msg.className = 'save-msg err'; msg.textContent = 'Σφάλμα: ' + error.message; }
-  else { msg.className = 'save-msg ok'; msg.textContent = 'Αποθηκεύτηκε επιτυχώς.'; formPersistence.clear(); setTimeout(() => loadFamilies(), 900); }
+  else { 
+    msg.className = 'save-msg ok'; 
+    msg.textContent = 'Αποθηκεύτηκε επιτυχώς.'; 
+    formIsDirty = false; // Mark form as clean
+    lastSavedToDb = true; // Mark that we saved to database
+    formPersistence.clear(); 
+    setTimeout(() => loadFamilies(), 900); 
+  }
 }
 
 // ══════════════════════════════════════════════
