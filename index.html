@@ -447,17 +447,28 @@ function autoDutch(pfx, score) {
 
 function medGrid(pfx, list) {
   return '<div class="meds-grid">' + list.map(m => {
-    const key = pfx + '_' + m.replace(/[^a-zA-Z0-9]/g, '_');
+    const key = pfx + '_Med_' + sanitizeMedName(m);
     return '<div class="med-item" id="' + key + '" onclick="toggleMed(\'' + key + '\')"><div class="med-box"></div><span>' + m + '</span></div>';
   }).join('') + '</div>';
+}
+
+function sanitizeMedName(name) {
+  // Create a simple hash-like string from the medication name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    const char = name.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return 'M' + Math.abs(hash).toString(36);
 }
 
 function medGridWithOther(pfx, list) {
   let html = '<div class="meds-grid">';
   list.forEach(m => {
-    const key = pfx + '_' + m.replace(/[^a-zA-Z0-9]/g, '_');
+    const key = pfx + '_Med_' + sanitizeMedName(m);
     if (m === 'Άλλο') {
-      html += '<div class="med-item" id="' + key + '" onclick="toggleMedOther(\'' + pfx + '\')"><div class="med-box"></div><span>' + m + '</span></div>';
+      html += '<div class="med-item" id="' + key + '" onclick="toggleMedOther(\'' + pfx + '\',\'' + key + '\')"><div class="med-box"></div><span>' + m + '</span></div>';
     } else {
       html += '<div class="med-item" id="' + key + '" onclick="toggleMed(\'' + key + '\')"><div class="med-box"></div><span>' + m + '</span></div>';
     }
@@ -472,8 +483,7 @@ function toggleMed(key) {
   if (el) { el.classList.toggle('on'); formState[key] = el.classList.contains('on') ? 1 : 0; triggerAutoSave(); }
 }
 
-function toggleMedOther(pfx) {
-  const key = pfx + '____';
+function toggleMedOther(pfx, key) {
   const el = document.getElementById(key);
   const container = document.getElementById(pfx + '_Other_Input_Container');
   if (el) {
@@ -747,10 +757,11 @@ function restoreForm(d) {
     }
   });
   
-  // Restore "Άλλο" medication field
+  // Restore "Άλλο" medication field - check if any Med key with Άλλο hash is set
+  const alloHash = 'M' + Math.abs((function(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h=h&h;}return h;})('Άλλο')).toString(36);
   Object.keys(d).forEach(k => {
-    if (k.endsWith('____') && d[k] === 1) {
-      const pfx = k.replace('____', '');
+    if (k.includes('_Med_' + alloHash) && d[k] === 1) {
+      const pfx = k.split('_Med_')[0];
       const container = document.getElementById(pfx + '_Other_Input_Container');
       if (container) container.style.display = 'block';
     }
