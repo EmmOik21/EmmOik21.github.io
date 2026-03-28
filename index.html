@@ -674,6 +674,13 @@ function physicalActivityField(pfx) {
   return ynConditional(id, 'Φυσική Δραστηριότητα', dropdownHtml);
 }
 
+// Γονιδιακός Έλεγχος with Γενετική Επιβεβαίωση YES/NO when YES
+function geneticTestField(pfx) {
+  const id = pfx + '_Genetic_Test';
+  const subHtml = yn(pfx + '_Genetic_Confirmation', 'Γονιδιακός Έλεγχος');
+  return ynConditional(id, 'Γενετική Επιβεβαίωση', subHtml);
+}
+
 function inpDutch(id, pfx) {
   return '<div class="fld"><span class="lbl">Total score (0–31)</span><input type="text" id="' + id + '" placeholder="0–31" oninput="onlyNumericInput(this);if(parseInt(this.value)>31){this.value=31;}formState[\'' + id + '\']=this.value;autoDutch(\'' + pfx + '\',this.value);triggerAutoSave()"><span class="field-err" id="' + id + '_err"></span></div>';
 }
@@ -766,7 +773,7 @@ function buildParentForm(pfx) {
     sec('Δημογραφικά') +
     '<div class="grid3">' + inp(pfx + '_Examination_Date', 'Ημερομηνία', 'date') + inp(pfx + '_Full_Name', 'Ονοματεπώνυμο *', 'text', 'Όνομα Επώνυμο') + amka(pfx + '_AMKA', 'ΑΜΚΑ *') + '</div>' +
     '<div class="grid3">' + inp(pfx + '_Date_of_Birth', 'Ημερομηνία Γέννησης *', 'date') + sel(pfx + '_Sex', 'Φύλο *', ['ΑΝΔΡΑΣ','ΓΥΝΑΙΚΑ']) + numInpBMI(pfx + '_Height_cm', 'Ύψος (cm)', 'cm', pfx) + '</div>' +
-    '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') + '</div>' +
+    '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + geneticTestField(pfx) + '</div>' +
     sec('Ιστορικό — Παράγοντες Κινδύνου') +
     '<div class="grid4">' + yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') + yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') + yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') + numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') + '</div>' +
     '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + physicalActivityField(pfx) + '</div>' +
@@ -806,7 +813,7 @@ function buildChildForm(pfx) {
     sec('Δημογραφικά') +
     '<div class="grid3">' + inp(pfx + '_Examination_Date', 'Ημερομηνία', 'date') + inp(pfx + '_Full_Name', 'Ονοματεπώνυμο *', 'text', 'Όνομα Επώνυμο') + amka(pfx + '_AMKA', 'ΑΜΚΑ *') + '</div>' +
     '<div class="grid3">' + inp(pfx + '_Date_of_Birth', 'Ημερομηνία Γέννησης *', 'date') + sel(pfx + '_Sex', 'Φύλο *', ['ΑΝΔΡΑΣ','ΓΥΝΑΙΚΑ']) + numInpBMI(pfx + '_Height_cm', 'Ύψος (cm)', 'cm', pfx) + '</div>' +
-    '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') + '</div>' +
+    '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + geneticTestField(pfx) + '</div>' +
     sec('Ιστορικό — Παράγοντες Κινδύνου') +
     '<div class="grid4">' + yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') + yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') + yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') + numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') + '</div>' +
     '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + physicalActivityField(pfx) + '</div>' +
@@ -894,6 +901,14 @@ function restoreForm(d) {
     if (k.endsWith('_Physical_Activity_Level') && d[k]) {
       const sel = document.getElementById(k);
       if (sel) sel.value = d[k];
+    }
+  });
+  
+  // Restore Genetic Test field
+  Object.keys(d).forEach(k => {
+    if (k.endsWith('_Genetic_Test') && d[k] === '1') {
+      const sub = document.getElementById('sub_' + k);
+      if (sub) sub.style.display = 'block';
     }
   });
   
