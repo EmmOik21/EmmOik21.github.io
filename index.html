@@ -649,6 +649,13 @@ function setAnginaType(pfx, val) {
   formState[pfx + '_Angina_Type'] = val; triggerAutoSave();
 }
 
+// Physical Activity with 1-7 dropdown when YES
+function physicalActivityField(pfx) {
+  const id = pfx + '_Physical_Activity';
+  const dropdownHtml = '<select id="' + pfx + '_Physical_Activity_Level" onchange="formState[\'' + pfx + '_Physical_Activity_Level\']=this.value;triggerAutoSave()" style="width:100%;"><option value="">— Επιλέξτε επίπεδο —</option><option value="1">1 - Πολύ χαμηλή</option><option value="2">2</option><option value="3">3</option><option value="4">4 - Μέτρια</option><option value="5">5</option><option value="6">6</option><option value="7">7 - Πολύ υψηλή</option></select>';
+  return ynConditional(id, 'Φυσική Δραστηριότητα', dropdownHtml);
+}
+
 function inpDutch(id, pfx) {
   return '<div class="fld"><span class="lbl">Total score (0–31)</span><input type="text" id="' + id + '" placeholder="0–31" oninput="onlyNumericInput(this);if(parseInt(this.value)>31){this.value=31;}formState[\'' + id + '\']=this.value;autoDutch(\'' + pfx + '\',this.value);triggerAutoSave()"><span class="field-err" id="' + id + '_err"></span></div>';
 }
@@ -744,11 +751,14 @@ function buildParentForm(pfx) {
     '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') + '</div>' +
     sec('Ιστορικό — Παράγοντες Κινδύνου') +
     '<div class="grid4">' + yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') + yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') + yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') + numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') + '</div>' +
-    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + sel(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα', ['1','2','3','4','5','6','7']) + '</div>' +
+    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + physicalActivityField(pfx) + '</div>' +
     sec('Ιστορικό — Καρδιαγγειακά') +
     '<div class="grid4">' + yn(pfx + '_Cerebrovascular_Accident', 'ΑΕΕ') + yn(pfx + '_CAD', 'ΣΝ') + sel(pfx + '_CAD_Number_of_Vessels', 'Αριθμός αγγείων', ['1','2','3']) + yn(pfx + '_Myocardial_Infarction', 'ΟΕΜ') + '</div>' +
     '<div class="grid4">' + yn(pfx + '_CABG', 'CABG') + yn(pfx + '_PTCA', 'PTCA') + ynConditional(pfx + '_Heart_Failure', 'Καρδιακή Ανεπάρκεια', nyha(pfx)) + anginaField(pfx) + '</div>' +
-    '<div class="grid3">' + yn(pfx + '_Carotid_Artery_Disease', 'Νόσος Καρωτίδων') + yn(pfx + '_Peripheral_Artery_Disease', 'Περιφερική Αγγειοπάθεια') + yn(pfx + '_COPD', 'ΧΑΠ') + '</div>' +
+    '<div class="grid2">' + yn(pfx + '_Carotid_Artery_Disease', 'Νόσος Καρωτίδων') + yn(pfx + '_Peripheral_Artery_Disease', 'Περιφερική Αγγειοπάθεια') + '</div>' +
+    sec('Ιστορικό — Άλλες Ασθένειες') +
+    '<div class="grid3">' + yn(pfx + '_COPD', 'ΧΑΠ') + yn(pfx + '_Sleep_Apnea', 'Υπνική Άπνοια') + yn(pfx + '_Hyperthyroidism', 'Υπερθυρεοειδισμός') + '</div>' +
+    '<div class="grid2">' + yn(pfx + '_Hypothyroidism', 'Υποθυρεοειδισμός') + yn(pfx + '_Liver_Disease', 'Ηπατοπάθεια') + '</div>' +
     sec('Οικογενειακό Ιστορικό') +
     '<div class="grid4">' + yn(pfx + '_Family_History_Diabetes', 'Σακχαρώδης Διαβήτης (οικ.)') + yn(pfx + '_Family_History_Hyperlipidaemia', 'Υπερλιπιδαιμία (οικ.)') + yn(pfx + '_Family_History_Elevated_Lpa', 'Αυξημένη Lpa (οικ.)') + yn(pfx + '_Family_History_CVA', 'ΑΕΕ (οικ.)') + '</div>' +
     '<div class="grid3">' + yn(pfx + '_Family_History_Premature_CAD', 'Πρώιμη ΣΝ (οικ.)') + yn(pfx + '_Family_History_CAD', 'ΣΝ (οικ.)') + cardiacDeathField(pfx) + '</div>' +
@@ -781,11 +791,14 @@ function buildChildForm(pfx) {
     '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') + '</div>' +
     sec('Ιστορικό — Παράγοντες Κινδύνου') +
     '<div class="grid4">' + yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') + yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') + yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') + numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') + '</div>' +
-    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + sel(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα', ['1','2','3','4','5','6','7']) + '</div>' +
+    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + physicalActivityField(pfx) + '</div>' +
     sec('Ιστορικό — Καρδιαγγειακά') +
     '<div class="grid4">' + yn(pfx + '_Cerebrovascular_Accident', 'ΑΕΕ') + yn(pfx + '_CAD', 'ΣΝ') + sel(pfx + '_CAD_Number_of_Vessels', 'Αριθμός αγγείων', ['1','2','3']) + yn(pfx + '_Myocardial_Infarction', 'ΟΕΜ') + '</div>' +
     '<div class="grid4">' + yn(pfx + '_CABG', 'CABG') + yn(pfx + '_PTCA', 'PTCA') + ynConditional(pfx + '_Heart_Failure', 'Καρδιακή Ανεπάρκεια', nyha(pfx)) + anginaField(pfx) + '</div>' +
-    '<div class="grid3">' + yn(pfx + '_Carotid_Artery_Disease', 'Νόσος Καρωτίδων') + yn(pfx + '_Peripheral_Artery_Disease', 'Περιφερική Αγγειοπάθεια') + yn(pfx + '_COPD', 'ΧΑΠ') + '</div>' +
+    '<div class="grid2">' + yn(pfx + '_Carotid_Artery_Disease', 'Νόσος Καρωτίδων') + yn(pfx + '_Peripheral_Artery_Disease', 'Περιφερική Αγγειοπάθεια') + '</div>' +
+    sec('Ιστορικό — Άλλες Ασθένειες') +
+    '<div class="grid3">' + yn(pfx + '_COPD', 'ΧΑΠ') + yn(pfx + '_Sleep_Apnea', 'Υπνική Άπνοια') + yn(pfx + '_Hyperthyroidism', 'Υπερθυρεοειδισμός') + '</div>' +
+    '<div class="grid2">' + yn(pfx + '_Hypothyroidism', 'Υποθυρεοειδισμός') + yn(pfx + '_Liver_Disease', 'Ηπατοπάθεια') + '</div>' +
     sec('Οικογενειακό Ιστορικό') +
     '<div style="background:var(--amber-bg);border:1px solid #D4A84B;border-radius:var(--r);padding:10px 14px;font-family:sans-serif;font-size:12px;color:var(--amber);margin-bottom:12px;">⚠️ <strong>Συμπληρώστε μόνο τον θάνατο από καρδιαγγειακό νόσημα για μητέρα/πατέρα.</strong><br><span style="font-size:11px;">Το υπόλοιπο Οικογενειακό Ιστορικό έχει ήδη καταχωρηθεί στις φόρμες των γονέων.</span></div>' +
     '<div class="grid4">' + yn(pfx + '_Family_History_Diabetes', 'Σακχαρώδης Διαβήτης (οικ.)') + yn(pfx + '_Family_History_Hyperlipidaemia', 'Υπερλιπιδαιμία (οικ.)') + yn(pfx + '_Family_History_Elevated_Lpa', 'Αυξημένη Lpa (οικ.)') + yn(pfx + '_Family_History_CVA', 'ΑΕΕ (οικ.)') + '</div>' +
@@ -851,6 +864,18 @@ function restoreForm(d) {
     }
     if (k.endsWith('_Cardiovascular_Death_Who') && d[k]) {
       document.querySelectorAll('[data-cdwho]').forEach(b => { b.classList.remove('sel'); if (b.dataset.val === d[k]) b.classList.add('sel'); });
+    }
+  });
+  
+  // Restore Physical Activity dropdown
+  Object.keys(d).forEach(k => {
+    if (k.endsWith('_Physical_Activity') && d[k] === '1') {
+      const sub = document.getElementById('sub_' + k);
+      if (sub) sub.style.display = 'block';
+    }
+    if (k.endsWith('_Physical_Activity_Level') && d[k]) {
+      const sel = document.getElementById(k);
+      if (sel) sel.value = d[k];
     }
   });
   
