@@ -744,7 +744,7 @@ function buildParentForm(pfx) {
     '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') + '</div>' +
     sec('Ιστορικό — Παράγοντες Κινδύνου') +
     '<div class="grid4">' + yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') + yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') + yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') + numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') + '</div>' +
-    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + yn(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα') + '</div>' +
+    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + sel(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα', ['1','2','3','4','5','6','7']) + '</div>' +
     sec('Ιστορικό — Καρδιαγγειακά') +
     '<div class="grid4">' + yn(pfx + '_Cerebrovascular_Accident', 'ΑΕΕ') + yn(pfx + '_CAD', 'ΣΝ') + sel(pfx + '_CAD_Number_of_Vessels', 'Αριθμός αγγείων', ['1','2','3']) + yn(pfx + '_Myocardial_Infarction', 'ΟΕΜ') + '</div>' +
     '<div class="grid4">' + yn(pfx + '_CABG', 'CABG') + yn(pfx + '_PTCA', 'PTCA') + ynConditional(pfx + '_Heart_Failure', 'Καρδιακή Ανεπάρκεια', nyha(pfx)) + anginaField(pfx) + '</div>' +
@@ -781,7 +781,7 @@ function buildChildForm(pfx) {
     '<div class="grid3">' + numInpBMI(pfx + '_Weight_kg', 'Βάρος (kg)', 'kg', pfx) + bmiDisplay(pfx) + yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση') + '</div>' +
     sec('Ιστορικό — Παράγοντες Κινδύνου') +
     '<div class="grid4">' + yn(pfx + '_Diabetes_Mellitus', 'Σακχαρώδης Διαβήτης') + yn(pfx + '_Hyperlipidaemia', 'Υπερλιπιδαιμία') + yn(pfx + '_Elevated_Lpa', 'Αυξημένη Lpa') + numInp(pfx + '_Lpa_Value_mgdL', 'Τιμή Lpa (mg/dL)') + '</div>' +
-    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + yn(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα') + '</div>' +
+    '<div class="grid4">' + yn(pfx + '_Arterial_Hypertension', 'Υπέρταση') + yn(pfx + '_Smoking', 'Κάπνισμα') + yn(pfx + '_Alcoholism', 'Αλκοολισμός') + sel(pfx + '_Physical_Activity', 'Φυσική Δραστηριότητα', ['1','2','3','4','5','6','7']) + '</div>' +
     sec('Ιστορικό — Καρδιαγγειακά') +
     '<div class="grid4">' + yn(pfx + '_Cerebrovascular_Accident', 'ΑΕΕ') + yn(pfx + '_CAD', 'ΣΝ') + sel(pfx + '_CAD_Number_of_Vessels', 'Αριθμός αγγείων', ['1','2','3']) + yn(pfx + '_Myocardial_Infarction', 'ΟΕΜ') + '</div>' +
     '<div class="grid4">' + yn(pfx + '_CABG', 'CABG') + yn(pfx + '_PTCA', 'PTCA') + ynConditional(pfx + '_Heart_Failure', 'Καρδιακή Ανεπάρκεια', nyha(pfx)) + anginaField(pfx) + '</div>' +
