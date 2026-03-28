@@ -677,8 +677,8 @@ function physicalActivityField(pfx) {
 // Γονιδιακός Έλεγχος with Γενετική Επιβεβαίωση YES/NO when YES
 function geneticTestField(pfx) {
   const id = pfx + '_Genetic_Test';
-  const subHtml = yn(pfx + '_Genetic_Confirmation', 'Γονιδιακός Έλεγχος');
-  return ynConditional(id, 'Γενετική Επιβεβαίωση', subHtml);
+  const subHtml = yn(pfx + '_Genetic_Confirmation', 'Γενετική Επιβεβαίωση');
+  return ynConditional(id, 'Γονιδιακός Έλεγχος', subHtml);
 }
 
 function inpDutch(id, pfx) {
